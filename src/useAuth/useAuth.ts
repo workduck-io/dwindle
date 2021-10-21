@@ -7,13 +7,12 @@ import {
   CognitoUser,
   CognitoUserSession,
 } from 'amazon-cognito-identity-js'
-import useAuthStore from '../AuthStore/useAuthStore'
+import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
 import { useEffect } from 'react'
-import axios from 'axios'
 
 const AWSRegion = 'us-east-1'
 
-function wrapErr<T>(f: (result: T) => void) {
+export function wrapErr<T>(f: (result: T) => void) {
   return (err: any, result: T) => {
     if (err) {
       console.error({ error: JSON.stringify(err) })
@@ -24,20 +23,22 @@ function wrapErr<T>(f: (result: T) => void) {
 
 const useAuth = () => {
   const uPool = useAuthStore((store) => store.userPool)
+  const email = useAuthStore((store) => store.email)
   const setUserPool = useAuthStore((store) => store.setUserPool)
 
   const setUser = useAuthStore((store) => store.setUser)
+  const setEmail = useAuthStore((store) => store.setEmail)
   // Needs to handle automatic refreshSession
   const setUserCred = useAuthStore((store) => store.setUserCred)
   const userCred = useAuthStore((store) => store.userCred)
+  const clearStore = useAuthStore((store) => store.clearStore)
 
   const initCognito = (poolData: ICognitoUserPoolData) => {
     setUserPool(poolData)
-    // init with pool
-    // fetch user from localStorage
-    // refresh login token if necessary
   }
 
+  // Handles refreshing of the token on every update of UserCred
+  // client also refreshes the token if a request returns 401
   useEffect(() => {
     const now = Math.floor(Date.now() / 1000)
     if (userCred) {
@@ -45,79 +46,39 @@ const useAuth = () => {
     }
   }, [userCred])
 
-  const signIn = (email: string, password: string) => {
-    const authData = {
-      Username: email,
-      Password: password,
-    }
-    const authDetails = new AuthenticationDetails(authData)
-
-    if (uPool) {
-      const userPool = new CognitoUserPool(uPool)
-      const user = new CognitoUser({ Username: email, Pool: userPool })
-      user.authenticateUser(authDetails, {
-        onSuccess: function (result) {
-          const accessToken = result.getAccessToken().getJwtToken()
-          const expiry = result.getAccessToken().getExpiration()
-
-          //POTENTIAL: Region needs to be set if not already set previously elsewhere.
-          //AWS.config.region = '<region>'
-          //
-          setUserCred({
-            email: email,
-            expiry,
-            token: accessToken,
-            url: `cognito-idp.${AWSRegion}.amazonaws.com/${userPool.getUserPoolId()}`,
-          })
-
-          /* AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-            IdentityPoolId: '...', // your identity pool id here
-            Logins: {
-              // Change the key below according to the specific region your user pool is in.
-              'cognito-idp.<region>.amazonaws.com/<YOUR_USER_POOL_ID>': result.getIdToken().getJwtToken(),
-            },
-          }) */
-        },
-
-        onFailure: function (err) {
-          alert(err.message || JSON.stringify(err))
-        },
-      })
-    }
-  }
-
-  const getClient = () => {
-    const API = axios.create()
-
-    API.interceptors.request.use((request) => {
-      if (request && request.headers && userCred && userCred.token) {
-        request.headers['Authorization'] = `Bearer ${userCred.token}`
+  const signIn = (email: string, password: string): Promise<UserCred> => {
+    return new Promise((resolve, reject) => {
+      const authData = {
+        Username: email,
+        Password: password,
       }
+      const authDetails = new AuthenticationDetails(authData)
 
-      return request
-    })
+      if (uPool) {
+        const userPool = new CognitoUserPool(uPool)
+        const user = new CognitoUser({ Username: email, Pool: userPool })
+        user.authenticateUser(authDetails, {
+          onSuccess: function (result) {
+            const accessToken = result.getAccessToken().getJwtToken()
+            const expiry = result.getAccessToken().getExpiration()
 
-    API.interceptors.response.use(undefined, async (error) => {
-      const response = error.response
+            const nUCred = {
+              email: email,
+              expiry,
+              token: accessToken,
+              url: `cognito-idp.${AWSRegion}.amazonaws.com/${userPool.getUserPoolId()}`,
+            }
 
-      if (response) {
-        if (response.status === 401 && error.config && !error.config.__isRetryRequest) {
-          try {
-            refreshToken()
-          } catch (authError) {
-            // refreshing has failed, but report the original error, i.e. 401
-            return Promise.reject(error)
-          }
+            setUserCred(nUCred)
+            resolve(nUCred)
+          },
 
-          // retry the original request
-          error.config.__isRetryRequest = true
-          return API(error.config)
-        }
+          onFailure: function (err) {
+            reject(err.message || JSON.stringify(err))
+          },
+        })
       }
-
-      return Promise.reject(error)
     })
-    return API
   }
 
   const refreshToken = () => {
@@ -154,42 +115,63 @@ const useAuth = () => {
     return undefined
   }
 
-  const signUp = (email: string, password: string) => {
-    const attributeEmail = new CognitoUserAttribute({ Name: 'email', Value: email })
-    const attributeList = [attributeEmail]
-    if (uPool) {
-      const userPool = new CognitoUserPool(uPool)
-      userPool.signUp(
-        email,
-        password,
-        attributeList,
-        [],
-        wrapErr((result) => {
+  const signUp = (email: string, password: string): Promise<{ email: string }> => {
+    return new Promise((resolve, reject) => {
+      const attributeEmail = new CognitoUserAttribute({ Name: 'email', Value: email })
+      const attributeList = [attributeEmail]
+      if (uPool) {
+        const userPool = new CognitoUserPool(uPool)
+        userPool.signUp(email, password, attributeList, [], (err, result) => {
+          if (err) {
+            reject(err)
+          }
           if (result) {
             const cognitoUser = result.user
+            setEmail(email)
             setUser(cognitoUser)
+            resolve({ email })
           }
         })
-      )
-    }
+      }
+    })
   }
 
-  const verifySignUp = () => {
-    /* if (user) {
-      user.confirmRegistration(
-        code,
-        true,
-        wrapErr((result) => {
-          if (result) {
-            console.log({ result })
-          }
-        })
-      )
-    } */
+  const verifySignUp = (code: string): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      if (email) {
+        if (uPool) {
+          const userPool = new CognitoUserPool(uPool)
+
+          const nuser = new CognitoUser({ Username: email, Pool: userPool })
+          nuser.confirmRegistration(code, true, (err, result) => {
+            if (err) reject('VerifySignUp Failed')
+            if (result) {
+              console.log({ result })
+              resolve(result)
+            }
+          })
+        }
+      }
+    })
   }
 
-  const resendCode = () => {
-    //if (user) user.resendConfirmationCode(wrapErr((result) => console.log({ result })))
+  const resendCode = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (email) {
+        if (uPool && userCred) {
+          const userPool = new CognitoUserPool(uPool)
+
+          const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+          nuser.resendConfirmationCode((err, result) => {
+            if (err) reject(err)
+            if (result) {
+              console.log({ result })
+              resolve('sent successfully')
+            }
+          })
+        }
+      }
+    })
   }
 
   const forgotPassword = () => {}
@@ -205,7 +187,22 @@ const useAuth = () => {
       ) */
   }
 
-  const signOut = () => {}
+  const signOut = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      try {
+        if (uPool && userCred) {
+          const userPool = new CognitoUserPool(uPool)
+          const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+          nuser.signOut(() => {
+            clearStore()
+            resolve('Signout Successful')
+          })
+        }
+      } catch {
+        reject('Signout Failed')
+      }
+    })
+  }
 
   return {
     initCognito,
@@ -221,7 +218,6 @@ const useAuth = () => {
     refreshToken,
     userCred,
     getConfig,
-    getClient,
   }
 }
 

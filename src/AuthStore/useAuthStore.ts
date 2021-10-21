@@ -13,10 +13,15 @@ export interface AuthStoreState {
   userPool: ICognitoUserPoolData | undefined
   setUserPool: (userPool: ICognitoUserPoolData) => void
 
+  email: string | undefined
+
   user: CognitoUser | undefined
   setUser: (userPool: CognitoUser) => void
   userCred: UserCred | undefined
   setUserCred: (userCred: UserCred) => void
+  setEmail: (email: string) => void
+
+  clearStore: () => void
 }
 
 const useAuthStore = create<AuthStoreState>(
@@ -26,9 +31,19 @@ const useAuthStore = create<AuthStoreState>(
       user: undefined,
       userCred: undefined,
 
+      email: undefined,
+
       setUserPool: (userPool) => set({ userPool }),
       setUser: (user) => set({ user }),
+      setEmail: (email) => set({ email }),
       setUserCred: (userCred) => set({ userCred }),
+
+      clearStore: () =>
+        set({
+          user: undefined,
+          userCred: undefined,
+          email: undefined,
+        }),
     }),
     { name: 'auth-aws' }
   )

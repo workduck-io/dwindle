@@ -1,2 +1,3 @@
 import useAuth from './useAuth/useAuth';
-export default useAuth;
+import client from './apiClient';
+export { client, useAuth };
