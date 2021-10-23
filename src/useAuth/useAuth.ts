@@ -35,6 +35,10 @@ const useAuth = () => {
 
   const initCognito = (poolData: ICognitoUserPoolData) => {
     setUserPool(poolData)
+    if (userCred) {
+      return userCred.email
+    }
+    return
   }
 
   // Handles refreshing of the token on every update of UserCred
