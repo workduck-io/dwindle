@@ -1,4 +1,4 @@
-import { ICognitoUserPoolData } from 'amazon-cognito-identity-js';
+import { ICognitoUserPoolData, ClientMetadata } from 'amazon-cognito-identity-js';
 import { UserCred } from '../AuthStore/useAuthStore';
 export declare function wrapErr<T>(f: (result: T) => void): (err: any, result: T) => void;
 declare const useAuth: () => {
@@ -7,11 +7,13 @@ declare const useAuth: () => {
     signUp: (email: string, password: string) => Promise<{
         email: string;
     }>;
-    verifySignUp: (code: string) => Promise<any>;
+    verifySignUp: (code: string, metadata?: ClientMetadata) => Promise<any>;
     resendCode: () => Promise<string>;
     forgotPassword: () => void;
     verifyForgotPassword: () => void;
-    getUserDetails: () => void;
+    getUserDetails: () => {
+        email: string;
+    } | undefined;
     changePassword: () => void;
     signOut: () => Promise<string>;
     refreshToken: () => void;

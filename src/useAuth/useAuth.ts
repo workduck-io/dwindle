@@ -6,6 +6,7 @@ import {
   AuthenticationDetails,
   CognitoUser,
   CognitoUserSession,
+  ClientMetadata,
 } from 'amazon-cognito-identity-js'
 import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
 import { useEffect } from 'react'
@@ -140,20 +141,25 @@ const useAuth = () => {
     })
   }
 
-  const verifySignUp = (code: string): Promise<any> => {
+  const verifySignUp = (code: string, metadata?: ClientMetadata): Promise<any> => {
     return new Promise((resolve, reject) => {
       if (email) {
         if (uPool) {
           const userPool = new CognitoUserPool(uPool)
 
           const nuser = new CognitoUser({ Username: email, Pool: userPool })
-          nuser.confirmRegistration(code, true, (err, result) => {
-            if (err) reject('VerifySignUp Failed')
-            if (result) {
-              console.log({ result })
-              resolve(result)
-            }
-          })
+          nuser.confirmRegistration(
+            code,
+            true,
+            (err, result) => {
+              if (err) reject('VerifySignUp Failed')
+              if (result) {
+                console.log({ result })
+                resolve(result)
+              }
+            },
+            metadata
+          )
         }
       }
     })
@@ -180,7 +186,13 @@ const useAuth = () => {
 
   const forgotPassword = () => {}
   const verifyForgotPassword = () => {}
-  const getUserDetails = () => {}
+
+  const getUserDetails = (): { email: string } | undefined => {
+    if (userCred) {
+      return { email: userCred.email }
+    }
+    return
+  }
 
   const changePassword = () => {
     /*if (user)
