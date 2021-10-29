@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware'
 
 export interface UserCred {
   email: string
+  userId: string
   token: string
   expiry: number
   url: string

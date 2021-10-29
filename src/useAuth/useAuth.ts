@@ -65,10 +65,12 @@ const useAuth = () => {
         user.authenticateUser(authDetails, {
           onSuccess: function (result) {
             const accessToken = result.getAccessToken().getJwtToken()
+            const payload = result.getAccessToken().payload
             const expiry = result.getAccessToken().getExpiration()
 
             const nUCred = {
               email: email,
+              userId: payload.sub,
               expiry,
               token: accessToken,
               url: `cognito-idp.${AWSRegion}.amazonaws.com/${userPool.getUserPoolId()}`,
@@ -100,8 +102,9 @@ const useAuth = () => {
                   console.log(err)
                 } else {
                   const token = session.getAccessToken().getJwtToken()
+                  const payload = session.getAccessToken().payload
                   const expiry = session.getAccessToken().getExpiration()
-                  setUserCred({ email: userCred.email, url: userCred.url, token, expiry })
+                  setUserCred({ email: userCred.email, url: userCred.url, token, expiry, userId: payload.sub })
                 }
               })
             }

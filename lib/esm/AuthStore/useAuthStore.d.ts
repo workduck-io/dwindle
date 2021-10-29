@@ -1,6 +1,7 @@
 import { CognitoUser, ICognitoUserPoolData } from 'amazon-cognito-identity-js';
 export interface UserCred {
     email: string;
+    userId: string;
     token: string;
     expiry: number;
     url: string;

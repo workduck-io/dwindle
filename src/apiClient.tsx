@@ -29,8 +29,9 @@ const refreshToken = () => {
                 console.log(err)
               } else {
                 const token = session.getAccessToken().getJwtToken()
+                const payload = session.getAccessToken().payload
                 const expiry = session.getAccessToken().getExpiration()
-                useAuthStore.setState({ userCred: { email: userCred.email, url: userCred.url, token, expiry } })
+                useAuthStore.setState({ userCred: { email: userCred.email, url: userCred.url, token, expiry, userId: payload.sub } })
               }
             })
           }
