@@ -1,15 +1,11 @@
 name: Build and Publish the Package
 on:
-  push
-  # release:
-  # types: [published]
+  release:
+    types: [published]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [16, 14, 12]
     env:
       NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       YARN_TOKEN: ${{ secrets.YARN_TOKEN }}
@@ -21,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           always-auth: true
-          node-version: ${{ matrix.node }}
+          node-version: "16.x"
       - run: npm install -g yarn
       - run: yarn --no-default-rc
-      - run: yarn publish --no-default-rc
+      - run: npm publish
