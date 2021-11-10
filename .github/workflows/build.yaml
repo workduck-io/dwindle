@@ -1,7 +1,8 @@
 name: Build and Publish the Package
 on:
-  release:
-    types: [published]
+  push
+  # release:
+  # types: [published]
 
 jobs:
   build:
@@ -22,5 +23,5 @@ jobs:
           always-auth: true
           node-version: ${{ matrix.node }}
       - run: npm install -g yarn
-      - run: yarn
-      - run: yarn publish
+      - run: yarn --no-default-rc
+      - run: yarn publish --no-default-rc
