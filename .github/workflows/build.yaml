@@ -24,4 +24,4 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm install -g yarn
       - run: yarn --no-default-rc
-      - run: yarn publish --no-default-rc
+      - run: npm publish
