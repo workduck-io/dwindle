@@ -1,0 +1,26 @@
+name: Build and Publish the Package
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [16, 14, 12]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          YARN_TOKEN: ${{ secrets.YARN_TOKEN }}
+        with:
+          always-auth: true
+          node-version: ${{ matrix.node }}
+      - run: npm install -g yarn
+      - run: yarn
+      - run: yarn publish
