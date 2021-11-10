@@ -1,5 +1,7 @@
 name: Build and Publish the Package
-on: [push]
+on:
+  release:
+    types: [published]
 
 jobs:
   build:
