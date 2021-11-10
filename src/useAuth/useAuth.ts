@@ -123,7 +123,7 @@ const useAuth = () => {
     return undefined
   }
 
-  const signUp = (email: string, password: string): Promise<{ email: string }> => {
+  const signUp = (email: string, password: string): Promise<string | { email: string }> => {
     return new Promise((resolve, reject) => {
       const attributeEmail = new CognitoUserAttribute({ Name: 'email', Value: email })
       const attributeList = [attributeEmail]
@@ -131,6 +131,9 @@ const useAuth = () => {
         const userPool = new CognitoUserPool(uPool)
         userPool.signUp(email, password, attributeList, [], (err, result) => {
           if (err) {
+            if (err.name === 'UsernameExistsException') {
+              setEmail(email)
+            }
             reject(err)
           }
           if (result) {
@@ -155,10 +158,11 @@ const useAuth = () => {
             code,
             true,
             (err, result) => {
-              if (err) reject('VerifySignUp Failed')
+              if (err) {
+                reject('VerifySignUp Failed')
+              }
               if (result) {
-                console.log({ result })
-                resolve(result)
+                resolve({ result })
               }
             },
             metadata
@@ -171,10 +175,10 @@ const useAuth = () => {
   const resendCode = (): Promise<string> => {
     return new Promise((resolve, reject) => {
       if (email) {
-        if (uPool && userCred) {
+        if (uPool) {
           const userPool = new CognitoUserPool(uPool)
 
-          const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+          const nuser = new CognitoUser({ Username: email, Pool: userPool })
           nuser.resendConfirmationCode((err, result) => {
             if (err) reject(err)
             if (result) {

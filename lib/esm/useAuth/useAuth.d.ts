@@ -4,7 +4,7 @@ export declare function wrapErr<T>(f: (result: T) => void): (err: any, result: T
 declare const useAuth: () => {
     initCognito: (poolData: ICognitoUserPoolData) => string | undefined;
     signIn: (email: string, password: string) => Promise<UserCred>;
-    signUp: (email: string, password: string) => Promise<{
+    signUp: (email: string, password: string) => Promise<string | {
         email: string;
     }>;
     verifySignUp: (code: string, metadata?: ClientMetadata) => Promise<any>;
