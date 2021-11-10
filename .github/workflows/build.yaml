@@ -17,6 +17,7 @@ jobs:
       - uses: actions/setup-node@v2
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          YARN_TOKEN: ${{ secrets.YARN_TOKEN }}
         with:
           always-auth: true
           node-version: ${{ matrix.node }}
