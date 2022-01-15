@@ -1,31 +1,31 @@
-import { useAuth, client } from 'cognito-http'
-import React, { useEffect } from 'react'
+import { useAuth, client } from '@workduck-io/dwindle'
+import React, { useEffect, useState } from 'react'
+
+import { Login, Register } from './Auth'
 
 function App() {
-  const { refreshToken, userCred, signIn, initCognito } = useAuth()
+  const { refreshToken, userCred, initCognito, signOut } = useAuth()
+
+  const [userDetails, setUserDetails] = useState('')
 
   useEffect(() => {
     // Make sure to initialize the library with the respective keys
     // before calling functions to client or authentication
     initCognito({ UserPoolId: 'USER_POOL_ID', ClientId: 'CLIENT_ID' })
+    console.log('Cognito Initialized')
   }, [])
-
-  const login = (e: any) => {
-    e.preventDefault()
-    // Simply call the function with email and password
-    signIn('test@email.com', 'emailPasswordStrong')
-  }
 
   const showUserDetails = (e: any) => {
     e.preventDefault()
     console.log('n', { userCred })
+    setUserDetails(JSON.stringify(userCred))
   }
 
   const refreshT = (e: any) => {
     e.preventDefault()
     // Manually refresh the token
     refreshToken()
-    console.log('n', { userCred })
+    setUserDetails(JSON.stringify(userCred))
   }
 
   const sendRequest = (e: any) => {
@@ -38,17 +38,30 @@ function App() {
       .catch((e) => console.log(e))
   }
 
+  const logout = async (e: any) => {
+    e.preventDefault()
+    await signOut()
+    console.log('Logged Out')
+    setUserDetails('')
+  }
+
   return (
     <div className="App">
       <header className="App-header">
         <h1>Testing example for cognito-http</h1>
-        <div onClick={login}> Login</div>
+        <h1>Register User</h1>
+        <Register />
+        <h1>Login</h1>
+        <Login />
         <br />
-        <div onClick={showUserDetails}>Show user Details</div>
+        <button onClick={showUserDetails}>Show user Details</button>
         <br />
-        <div onClick={refreshT}> Refresh Token</div>
+        <button onClick={refreshT}> Refresh Token</button>
         <br />
-        <div onClick={sendRequest}>Send requests</div>
+        <h4>User Credentials</h4>
+        <p>{userDetails}</p>
+        <button onClick={sendRequest}>Send requests</button>
+        <button onClick={logout}>Logout!</button>
       </header>
     </div>
   )
