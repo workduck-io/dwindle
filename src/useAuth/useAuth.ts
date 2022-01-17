@@ -123,10 +123,25 @@ const useAuth = () => {
     return undefined
   }
 
-  const signUp = (email: string, password: string): Promise<string | { email: string }> => {
+  const signUp = (email: string, password: string, customAttributes?: any[]): Promise<string | { email: string }> => {
     return new Promise((resolve, reject) => {
       const attributeEmail = new CognitoUserAttribute({ Name: 'email', Value: email })
       const attributeList = [attributeEmail]
+
+      if (customAttributes !== undefined && customAttributes.length > 0) {
+        customAttributes.forEach((item: any) => {
+          const name = `custom:${item.name}`
+          const value = item.value
+          const t = new CognitoUserAttribute({
+            Name: name,
+            Value: value,
+          })
+          attributeList.push(t)
+        })
+      }
+
+      console.log('Attribute List: ', attributeList)
+
       if (uPool) {
         const userPool = new CognitoUserPool(uPool)
         userPool.signUp(email, password, attributeList, [], (err, result) => {
