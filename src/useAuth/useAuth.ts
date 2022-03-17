@@ -10,7 +10,7 @@ import {
 } from 'amazon-cognito-identity-js'
 import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
 import { useEffect } from 'react'
-
+import jwtDecode from 'jwt-decode'
 const AWSRegion = 'us-east-1'
 
 export function wrapErr<T>(f: (result: T) => void) {
@@ -50,6 +50,26 @@ const useAuth = () => {
       if (userCred.expiry < now) refreshToken()
     }
   }, [userCred])
+
+  const googleSignIn = (idToken: string, accessToken: string) => {
+    return new Promise((resolve, reject) => {
+      try {
+        const decodedIdToken: any = jwtDecode(idToken)
+
+        const nUCred = {
+          email: decodedIdToken.email,
+          userId: decodedIdToken.sub,
+          expiry: decodedIdToken.exp,
+          token: accessToken,
+          url: decodedIdToken.iss,
+        }
+        setUserCred(nUCred)
+        resolve(nUCred)
+      } catch (error) {
+        reject(error.message || JSON.stringify(error))
+      }
+    })
+  }
 
   const signIn = (email: string, password: string): Promise<UserCred> => {
     return new Promise((resolve, reject) => {
@@ -256,6 +276,7 @@ const useAuth = () => {
     refreshToken,
     userCred,
     getConfig,
+    googleSignIn,
   }
 }
 
