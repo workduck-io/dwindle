@@ -23,5 +23,6 @@ declare const useAuth: () => {
             Authorization: string;
         };
     } | undefined;
+    googleSignIn: (idToken: string, accessToken: string) => Promise<unknown>;
 };
 export default useAuth;
