@@ -11,7 +11,13 @@ import {
 import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
 import { useEffect } from 'react'
 import jwtDecode from 'jwt-decode'
+
 const AWSRegion = 'us-east-1'
+const WorkspaceIDsAttrName = 'custom:mex_workspace_ids'
+export interface AWSAttribute {
+  Name: string
+  Value: string
+}
 
 export function wrapErr<T>(f: (result: T) => void) {
   return (err: any, result: T) => {
@@ -84,15 +90,16 @@ const useAuth = () => {
         const user = new CognitoUser({ Username: email, Pool: userPool })
         user.authenticateUser(authDetails, {
           onSuccess: function (result) {
-            const accessToken = result.getAccessToken().getJwtToken()
-            const payload = result.getAccessToken().payload
-            const expiry = result.getAccessToken().getExpiration()
+            const idToken = result.getIdToken().getJwtToken()
+            // const accessToken = result.getAccessToken().getJwtToken()
+            const payload = result.getIdToken().payload
+            const expiry = result.getIdToken().getExpiration()
 
             const nUCred = {
               email: email,
               userId: payload.sub,
               expiry,
-              token: accessToken,
+              token: idToken,
               url: `cognito-idp.${AWSRegion}.amazonaws.com/${userPool.getUserPoolId()}`,
             }
 
@@ -117,13 +124,13 @@ const useAuth = () => {
           wrapErr((sess: CognitoUserSession) => {
             if (sess) {
               const refreshToken = sess.getRefreshToken()
-              nuser.refreshSession(refreshToken, (err, session) => {
+              nuser.refreshSession(refreshToken, (err, session: CognitoUserSession) => {
                 if (err) {
                   console.log(err)
                 } else {
-                  const token = session.getAccessToken().getJwtToken()
-                  const payload = session.getAccessToken().payload
-                  const expiry = session.getAccessToken().getExpiration()
+                  const token = session.getIdToken().getJwtToken()
+                  const payload = session.getIdToken().payload
+                  const expiry = session.getIdToken().getExpiration()
                   setUserCred({ email: userCred.email, url: userCred.url, token, expiry, userId: payload.sub })
                 }
               })
@@ -262,6 +269,80 @@ const useAuth = () => {
     })
   }
 
+  const updateUserAttributes = (attributes: AWSAttribute[]): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      try {
+        if (userCred) {
+          if (uPool) {
+            const userPool = new CognitoUserPool(uPool)
+            const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+            nuser.getSession(
+              wrapErr((sess: CognitoUserSession) => {
+                const attrs = attributes.map((attribute) => {
+                  if (!attribute.Name.startsWith('custom:')) attribute.Name = `custom:${attribute.Name}`
+
+                  if (attribute.Name === WorkspaceIDsAttrName)
+                    reject('To update workspace Id, use the userAddWorkspace method ')
+
+                  return new CognitoUserAttribute(attribute)
+                })
+
+                if (sess) {
+                  nuser.updateAttributes(attrs, (err, result) => {
+                    if (err) throw new Error(err.message)
+                    resolve(result)
+                  })
+                }
+              })
+            )
+          }
+        }
+        resolve(attributes)
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  const userAddWorkspace = (workspaceId: string): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      try {
+        if (userCred) {
+          if (uPool) {
+            const userPool = new CognitoUserPool(uPool)
+            const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+            nuser.getSession(
+              // @ts-ignore
+              wrapErr((sess: CognitoUserSession) => {
+                nuser.getUserAttributes((err, result) => {
+                  if (err) reject(`Error: ${err.message}`)
+
+                  result?.forEach((attr) => {
+                    if (attr.Name === WorkspaceIDsAttrName) {
+                      const newWorkspaceIDs = `${attr.Value}#${workspaceId}`
+                      console.log('Got existing WorkspaceIDs', newWorkspaceIDs)
+                      const t = new CognitoUserAttribute({
+                        Name: WorkspaceIDsAttrName,
+                        Value: newWorkspaceIDs,
+                      })
+                      // @ts-ignore
+                      nuser.updateAttributes([t], (err, result) => {
+                        if (err) reject(`Error: ${err.message}`)
+                        resolve('WorkspaceID Added Successfully')
+                      })
+                    }
+                  })
+                })
+              })
+            )
+          }
+        }
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
   return {
     initCognito,
     signIn,
@@ -277,6 +358,8 @@ const useAuth = () => {
     userCred,
     getConfig,
     googleSignIn,
+    updateUserAttributes,
+    userAddWorkspace,
   }
 }
 

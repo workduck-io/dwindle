@@ -1,5 +1,9 @@
 import { ICognitoUserPoolData, ClientMetadata } from 'amazon-cognito-identity-js';
 import { UserCred } from '../AuthStore/useAuthStore';
+export interface AWSAttribute {
+    Name: string;
+    Value: string;
+}
 export declare function wrapErr<T>(f: (result: T) => void): (err: any, result: T) => void;
 declare const useAuth: () => {
     initCognito: (poolData: ICognitoUserPoolData) => string | undefined;
@@ -24,5 +28,7 @@ declare const useAuth: () => {
         };
     } | undefined;
     googleSignIn: (idToken: string, accessToken: string) => Promise<unknown>;
+    updateUserAttributes: (attributes: AWSAttribute[]) => Promise<any>;
+    userAddWorkspace: (workspaceId: string) => Promise<any>;
 };
 export default useAuth;
