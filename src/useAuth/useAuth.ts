@@ -84,15 +84,16 @@ const useAuth = () => {
         const user = new CognitoUser({ Username: email, Pool: userPool })
         user.authenticateUser(authDetails, {
           onSuccess: function (result) {
-            const accessToken = result.getAccessToken().getJwtToken()
-            const payload = result.getAccessToken().payload
-            const expiry = result.getAccessToken().getExpiration()
+            const idToken = result.getIdToken().getJwtToken()
+            // const accessToken = result.getAccessToken().getJwtToken()
+            const payload = result.getIdToken().payload
+            const expiry = result.getIdToken().getExpiration()
 
             const nUCred = {
               email: email,
               userId: payload.sub,
               expiry,
-              token: accessToken,
+              token: idToken,
               url: `cognito-idp.${AWSRegion}.amazonaws.com/${userPool.getUserPoolId()}`,
             }
 
@@ -117,13 +118,13 @@ const useAuth = () => {
           wrapErr((sess: CognitoUserSession) => {
             if (sess) {
               const refreshToken = sess.getRefreshToken()
-              nuser.refreshSession(refreshToken, (err, session) => {
+              nuser.refreshSession(refreshToken, (err, session: CognitoUserSession) => {
                 if (err) {
                   console.log(err)
                 } else {
-                  const token = session.getAccessToken().getJwtToken()
-                  const payload = session.getAccessToken().payload
-                  const expiry = session.getAccessToken().getExpiration()
+                  const token = session.getIdToken().getJwtToken()
+                  const payload = session.getIdToken().payload
+                  const expiry = session.getIdToken().getExpiration()
                   setUserCred({ email: userCred.email, url: userCred.url, token, expiry, userId: payload.sub })
                 }
               })

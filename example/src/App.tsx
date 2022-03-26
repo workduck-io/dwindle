@@ -9,9 +9,9 @@ function App() {
   const [userDetails, setUserDetails] = useState('')
 
   useEffect(() => {
-    // Make sure to initialize the library with the respective keys
+    // Make sure to initialize the lib rary with the respective keys
     // before calling functions to client or authentication
-    initCognito({ UserPoolId: 'USER_POOL_ID', ClientId: 'CLIENT_ID' })
+    initCognito({ UserPoolId: 'us-east-1_Zu7FAh7hj', ClientId: '6pvqt64p0l2kqkk2qafgdh13qe' })
     console.log('Cognito Initialized')
   }, [])
 

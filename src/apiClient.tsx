@@ -24,13 +24,13 @@ const refreshToken = () => {
         wrapErr((sess: CognitoUserSession) => {
           if (sess) {
             const refreshToken = sess.getRefreshToken()
-            nuser.refreshSession(refreshToken, (err, session) => {
+            nuser.refreshSession(refreshToken, (err, session: CognitoUserSession) => {
               if (err) {
                 console.log(err)
               } else {
-                const token = session.getAccessToken().getJwtToken()
-                const payload = session.getAccessToken().payload
-                const expiry = session.getAccessToken().getExpiration()
+                const token = session.getIdToken().getJwtToken()
+                const payload = session.getIdToken().payload
+                const expiry = session.getIdToken().getExpiration()
                 useAuthStore.setState({
                   userCred: { email: userCred.email, url: userCred.url, token, expiry, userId: payload.sub },
                 })
