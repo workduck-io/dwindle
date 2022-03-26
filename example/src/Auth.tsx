@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { useAuth } from '@workduck-io/dwindle'
 
 interface LoginFormDetails {
@@ -11,7 +11,7 @@ export const Login = () => {
   const [loginMessage, setLoginMessage] = useState('')
   const { register, handleSubmit } = useForm<LoginFormDetails>()
 
-  const { signIn, signOut } = useAuth()
+  const { signIn } = useAuth()
 
   const onSubmit = async (data: LoginFormDetails) => {
     console.log('Login Form Data is: ', data)
@@ -105,5 +105,59 @@ export const Register = () => {
         </>
       )}
     </>
+  )
+}
+
+interface CustomAttributeFormDetails {
+  attr: {
+    Name: string
+    Value: string
+  }[]
+}
+
+export const CustomAttributes = () => {
+  const { updateUserAttributes } = useAuth()
+
+  const { register, control, handleSubmit } = useForm<CustomAttributeFormDetails>()
+  const { fields, append, remove } = useFieldArray({
+    name: 'attr',
+    control,
+  })
+
+  const onSubmit = async (data: CustomAttributeFormDetails) => {
+    const res = await updateUserAttributes(data.attr)
+    console.log('Res: ', res)
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      {fields.map((field, index) => {
+        return (
+          <div key={field.id}>
+            <section className={'section'} key={field.id}>
+              <input placeholder="Attribute Name" {...register(`attr.${index}.Name` as const)} />
+              <input placeholder="Attribute Value" {...register(`attr.${index}.Value`)} />
+
+              <button type="button" onClick={() => remove(index)}>
+                Remove Attribute
+              </button>
+            </section>
+          </div>
+        )
+      })}
+
+      <button
+        type="button"
+        onClick={() =>
+          append({
+            Name: '',
+            Value: '',
+          })
+        }
+      >
+        Add Attribute
+      </button>
+      <input type="submit" />
+    </form>
   )
 }

@@ -1,7 +1,7 @@
 import { useAuth, client } from '@workduck-io/dwindle'
 import React, { useEffect, useState } from 'react'
 
-import { Login, Register } from './Auth'
+import { Login, Register, CustomAttributes } from './Auth'
 
 function App() {
   const { refreshToken, userCred, initCognito, signOut } = useAuth()
@@ -13,7 +13,7 @@ function App() {
     // before calling functions to client or authentication
     initCognito({ UserPoolId: 'us-east-1_Zu7FAh7hj', ClientId: '6pvqt64p0l2kqkk2qafgdh13qe' })
     console.log('Cognito Initialized')
-  }, [])
+  }, []) // eslint-disable-line
 
   const showUserDetails = (e: any) => {
     e.preventDefault()
@@ -60,6 +60,8 @@ function App() {
         <br />
         <h4>User Credentials</h4>
         <p>{userDetails}</p>
+        <h4>Add Custom Attributes</h4>
+        <CustomAttributes />
         <button onClick={sendRequest}>Send requests</button>
         <button onClick={logout}>Logout!</button>
       </header>

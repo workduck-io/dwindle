@@ -11,7 +11,13 @@ import {
 import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
 import { useEffect } from 'react'
 import jwtDecode from 'jwt-decode'
+
 const AWSRegion = 'us-east-1'
+
+export interface AWSAttribute {
+  Name: string
+  Value: string
+}
 
 export function wrapErr<T>(f: (result: T) => void) {
   return (err: any, result: T) => {
@@ -263,6 +269,37 @@ const useAuth = () => {
     })
   }
 
+  const updateUserAttributes = (attributes: AWSAttribute[]): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      try {
+        if (userCred) {
+          if (uPool) {
+            const userPool = new CognitoUserPool(uPool)
+            const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+            nuser.getSession(
+              wrapErr((sess: CognitoUserSession) => {
+                const attrs = attributes.map((attribute) => {
+                  if (!attribute.Name.startsWith('custom:')) attribute.Name = `custom:${attribute.Name}`
+                  return new CognitoUserAttribute(attribute)
+                })
+
+                if (sess) {
+                  nuser.updateAttributes(attrs, (err, result) => {
+                    if (err) throw new Error(err.message)
+                    resolve(result)
+                  })
+                }
+              })
+            )
+          }
+        }
+        resolve(attributes)
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
   return {
     initCognito,
     signIn,
@@ -278,6 +315,7 @@ const useAuth = () => {
     userCred,
     getConfig,
     googleSignIn,
+    updateUserAttributes,
   }
 }
 
