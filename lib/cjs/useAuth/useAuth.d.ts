@@ -29,5 +29,6 @@ declare const useAuth: () => {
     } | undefined;
     googleSignIn: (idToken: string, accessToken: string) => Promise<unknown>;
     updateUserAttributes: (attributes: AWSAttribute[]) => Promise<any>;
+    userAddWorkspace: (workspaceId: string) => Promise<any>;
 };
 export default useAuth;

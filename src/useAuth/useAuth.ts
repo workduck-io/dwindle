@@ -13,7 +13,7 @@ import { useEffect } from 'react'
 import jwtDecode from 'jwt-decode'
 
 const AWSRegion = 'us-east-1'
-
+const WorkspaceIDsAttrName = 'custom:mex_workspace_ids'
 export interface AWSAttribute {
   Name: string
   Value: string
@@ -280,6 +280,10 @@ const useAuth = () => {
               wrapErr((sess: CognitoUserSession) => {
                 const attrs = attributes.map((attribute) => {
                   if (!attribute.Name.startsWith('custom:')) attribute.Name = `custom:${attribute.Name}`
+
+                  if (attribute.Name === WorkspaceIDsAttrName)
+                    reject('To update workspace Id, use the userAddWorkspace method ')
+
                   return new CognitoUserAttribute(attribute)
                 })
 
@@ -294,6 +298,45 @@ const useAuth = () => {
           }
         }
         resolve(attributes)
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  const userAddWorkspace = (workspaceId: string): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      try {
+        if (userCred) {
+          if (uPool) {
+            const userPool = new CognitoUserPool(uPool)
+            const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+            nuser.getSession(
+              // @ts-ignore
+              wrapErr((sess: CognitoUserSession) => {
+                nuser.getUserAttributes((err, result) => {
+                  if (err) reject(`Error: ${err.message}`)
+
+                  result?.forEach((attr) => {
+                    if (attr.Name === WorkspaceIDsAttrName) {
+                      const newWorkspaceIDs = `${attr.Value}#${workspaceId}`
+                      console.log('Got existing WorkspaceIDs', newWorkspaceIDs)
+                      const t = new CognitoUserAttribute({
+                        Name: WorkspaceIDsAttrName,
+                        Value: newWorkspaceIDs,
+                      })
+                      // @ts-ignore
+                      nuser.updateAttributes([t], (err, result) => {
+                        if (err) reject(`Error: ${err.message}`)
+                        resolve('WorkspaceID Added Successfully')
+                      })
+                    }
+                  })
+                })
+              })
+            )
+          }
+        }
       } catch (error) {
         reject(error)
       }
@@ -316,6 +359,7 @@ const useAuth = () => {
     getConfig,
     googleSignIn,
     updateUserAttributes,
+    userAddWorkspace,
   }
 }
 

@@ -116,7 +116,7 @@ interface CustomAttributeFormDetails {
 }
 
 export const CustomAttributes = () => {
-  const { updateUserAttributes } = useAuth()
+  const { updateUserAttributes, userAddWorkspace } = useAuth()
 
   const { register, control, handleSubmit } = useForm<CustomAttributeFormDetails>()
   const { fields, append, remove } = useFieldArray({
@@ -126,6 +126,7 @@ export const CustomAttributes = () => {
 
   const onSubmit = async (data: CustomAttributeFormDetails) => {
     const res = await updateUserAttributes(data.attr)
+    // const res = await userAddWorkspace(data.attr[0].Value)
     console.log('Res: ', res)
   }
 
