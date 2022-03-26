@@ -11,7 +11,7 @@ function App() {
   useEffect(() => {
     // Make sure to initialize the lib rary with the respective keys
     // before calling functions to client or authentication
-    initCognito({ UserPoolId: 'us-east-1_Zu7FAh7hj', ClientId: '6pvqt64p0l2kqkk2qafgdh13qe' })
+    initCognito({ UserPoolId: 'COGNITO_USER_POOL_ID', ClientId: 'COGNITO_CLIENT_ID' })
     console.log('Cognito Initialized')
   }, []) // eslint-disable-line
 
