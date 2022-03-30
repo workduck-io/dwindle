@@ -8,6 +8,7 @@ export interface UserCred {
   token: string
   expiry: number
   url: string
+  username: string
 }
 
 export interface AuthStoreState {

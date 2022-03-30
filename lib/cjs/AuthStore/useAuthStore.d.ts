@@ -5,6 +5,7 @@ export interface UserCred {
     token: string;
     expiry: number;
     url: string;
+    username: string;
 }
 export interface AuthStoreState {
     userPool: ICognitoUserPoolData | undefined;
@@ -17,5 +18,5 @@ export interface AuthStoreState {
     setEmail: (email: string) => void;
     clearStore: () => void;
 }
-declare const useAuthStore: import("zustand").UseBoundStore<AuthStoreState, import("zustand").StoreApi<AuthStoreState>>;
+declare const useAuthStore: import("zustand").UseStore<AuthStoreState>;
 export default useAuthStore;

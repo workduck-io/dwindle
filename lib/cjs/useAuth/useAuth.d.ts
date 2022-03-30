@@ -1,4 +1,4 @@
-import { ICognitoUserPoolData, ClientMetadata } from 'amazon-cognito-identity-js';
+import { ClientMetadata, ICognitoUserPoolData } from 'amazon-cognito-identity-js';
 import { UserCred } from '../AuthStore/useAuthStore';
 export interface AWSAttribute {
     Name: string;
@@ -27,7 +27,7 @@ declare const useAuth: () => {
             Authorization: string;
         };
     } | undefined;
-    googleSignIn: (idToken: string, accessToken: string) => Promise<unknown>;
+    googleSignIn: (idToken: string) => Promise<unknown>;
     updateUserAttributes: (attributes: AWSAttribute[]) => Promise<any>;
     userAddWorkspace: (workspaceId: string) => Promise<any>;
 };

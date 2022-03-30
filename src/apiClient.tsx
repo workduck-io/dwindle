@@ -32,7 +32,14 @@ const refreshToken = () => {
                 const payload = session.getIdToken().payload
                 const expiry = session.getIdToken().getExpiration()
                 useAuthStore.setState({
-                  userCred: { email: userCred.email, url: userCred.url, token, expiry, userId: payload.sub },
+                  userCred: {
+                    email: userCred.email,
+                    username: userCred.username,
+                    url: userCred.url,
+                    token,
+                    expiry,
+                    userId: payload.sub,
+                  },
                 })
               }
             })

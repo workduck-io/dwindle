@@ -1,16 +1,16 @@
 import {
-  CognitoUserPool,
+  AuthenticationDetails,
+  ClientMetadata,
+  CognitoUser,
   CognitoUserAttribute,
+  CognitoUserPool,
+  CognitoUserSession,
   //CognitoUser,
   ICognitoUserPoolData,
-  AuthenticationDetails,
-  CognitoUser,
-  CognitoUserSession,
-  ClientMetadata,
 } from 'amazon-cognito-identity-js'
-import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
-import { useEffect } from 'react'
 import jwtDecode from 'jwt-decode'
+import { useEffect } from 'react'
+import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
 
 const AWSRegion = 'us-east-1'
 const WorkspaceIDsAttrName = 'custom:mex_workspace_ids'
@@ -57,16 +57,18 @@ const useAuth = () => {
     }
   }, [userCred])
 
-  const googleSignIn = (idToken: string, accessToken: string) => {
+  const googleSignIn = (idToken: string) => {
     return new Promise((resolve, reject) => {
       try {
         const decodedIdToken: any = jwtDecode(idToken)
+        console.log('Decoded token', { decodedIdToken })
 
         const nUCred = {
           email: decodedIdToken.email,
           userId: decodedIdToken.sub,
           expiry: decodedIdToken.exp,
-          token: accessToken,
+          token: idToken,
+          username: decodedIdToken['cognito:username'],
           url: decodedIdToken.iss,
         }
         setUserCred(nUCred)
@@ -97,6 +99,7 @@ const useAuth = () => {
 
             const nUCred = {
               email: email,
+              username: email,
               userId: payload.sub,
               expiry,
               token: idToken,
@@ -118,20 +121,31 @@ const useAuth = () => {
   const refreshToken = () => {
     if (userCred) {
       if (uPool) {
+        console.log('refreshingToken1', { userCred, uPool })
+
         const userPool = new CognitoUserPool(uPool)
-        const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+        const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
         nuser.getSession(
           wrapErr((sess: CognitoUserSession) => {
             if (sess) {
-              const refreshToken = sess.getRefreshToken()
-              nuser.refreshSession(refreshToken, (err, session: CognitoUserSession) => {
+              const refreshToken_ = sess.getRefreshToken()
+              nuser.refreshSession(refreshToken_, (err, session: CognitoUserSession) => {
                 if (err) {
+                  console.log('refreshingToken', { refreshToken_ })
                   console.log(err)
                 } else {
                   const token = session.getIdToken().getJwtToken()
                   const payload = session.getIdToken().payload
                   const expiry = session.getIdToken().getExpiration()
-                  setUserCred({ email: userCred.email, url: userCred.url, token, expiry, userId: payload.sub })
+                  console.log('refreshingToken', { refreshToken_, token, payload, expiry })
+                  setUserCred({
+                    email: userCred.email,
+                    username: userCred.username,
+                    url: userCred.url,
+                    token,
+                    expiry,
+                    userId: payload.sub,
+                  })
                 }
               })
             }
@@ -257,7 +271,7 @@ const useAuth = () => {
       try {
         if (uPool && userCred) {
           const userPool = new CognitoUserPool(uPool)
-          const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+          const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
           nuser.signOut(() => {
             clearStore()
             resolve('Signout Successful')
@@ -275,7 +289,7 @@ const useAuth = () => {
         if (userCred) {
           if (uPool) {
             const userPool = new CognitoUserPool(uPool)
-            const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+            const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
             nuser.getSession(
               wrapErr((sess: CognitoUserSession) => {
                 const attrs = attributes.map((attribute) => {
@@ -310,7 +324,7 @@ const useAuth = () => {
         if (userCred) {
           if (uPool) {
             const userPool = new CognitoUserPool(uPool)
-            const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+            const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
             nuser.getSession(
               // @ts-ignore
               wrapErr((sess: CognitoUserSession) => {
