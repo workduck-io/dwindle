@@ -11,6 +11,8 @@ import {
 import jwtDecode from 'jwt-decode'
 import { useEffect } from 'react'
 import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
+import axios, { AxiosRequestConfig } from 'axios'
+import qs from 'qs'
 
 const AWSRegion = 'us-east-1'
 const WorkspaceIDsAttrName = 'custom:mex_workspace_ids'
@@ -57,22 +59,48 @@ const useAuth = () => {
     }
   }, [userCred])
 
-  const googleSignIn = (idToken: string) => {
+  const googleSignIn = (code: string, clientId: string, redirectURI: string) => {
     return new Promise((resolve, reject) => {
       try {
-        const decodedIdToken: any = jwtDecode(idToken)
-        console.log('Decoded token', { decodedIdToken })
-
-        const nUCred = {
-          email: decodedIdToken.email,
-          userId: decodedIdToken.sub,
-          expiry: decodedIdToken.exp,
-          token: idToken,
-          username: decodedIdToken['cognito:username'],
-          url: decodedIdToken.iss,
+        const dataPayload = qs.stringify({
+          grant_type: 'authorization_code',
+          client_id: clientId,
+          redirect_uri: redirectURI,
+          code,
+        })
+        const config: AxiosRequestConfig<any> = {
+          method: 'post',
+          url: 'https://workduck.auth.us-east-1.amazoncognito.com/oauth2/token',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Cookie: 'XSRF-TOKEN=c393745c-a0fa-4858-9777-897c3aff4fbc',
+          },
+          data: dataPayload,
         }
-        setUserCred(nUCred)
-        resolve(nUCred)
+
+        axios(config)
+          .then(function (response) {
+            const tripletTokens: any = response.data
+            const decodedIdToken: any = jwtDecode(tripletTokens?.id_token)
+
+            const nUCred = {
+              email: decodedIdToken.email,
+              userId: decodedIdToken.sub,
+              expiry: decodedIdToken.exp,
+              token: tripletTokens?.id_token,
+              username: decodedIdToken['cognito:username'],
+              url: decodedIdToken.iss,
+            }
+            setUserCred(nUCred)
+
+            resolve({
+              userCred: nUCred,
+              tokens: tripletTokens,
+            })
+          })
+          .catch(function (error) {
+            reject(error.message || JSON.stringify(error))
+          })
       } catch (error) {
         reject(error.message || JSON.stringify(error))
       }
