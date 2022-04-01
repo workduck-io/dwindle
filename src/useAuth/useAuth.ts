@@ -1,6 +1,9 @@
 import {
   AuthenticationDetails,
   ClientMetadata,
+  CognitoAccessToken,
+  CognitoIdToken,
+  CognitoRefreshToken,
   CognitoUser,
   CognitoUserAttribute,
   CognitoUserPool,
@@ -24,7 +27,6 @@ export interface AWSAttribute {
 export function wrapErr<T>(f: (result: T) => void) {
   return (err: any, result: T) => {
     if (err) {
-      console.error({ error: JSON.stringify(err) })
       return
     } else f(result)
   }
@@ -91,6 +93,19 @@ const useAuth = () => {
               username: decodedIdToken['cognito:username'],
               url: decodedIdToken.iss,
             }
+
+            if (uPool) {
+              const userPool = new CognitoUserPool(uPool)
+              const nuser = new CognitoUser({ Username: nUCred.username, Pool: userPool })
+              const uSession = new CognitoUserSession({
+                AccessToken: new CognitoAccessToken({ AccessToken: tripletTokens.access_token }),
+                IdToken: new CognitoIdToken({ IdToken: tripletTokens.id_token }),
+                RefreshToken: new CognitoRefreshToken({ RefreshToken: tripletTokens.refresh_token }),
+              })
+
+              nuser.setSignInUserSession(uSession)
+            }
+
             setUserCred(nUCred)
 
             resolve({
@@ -149,23 +164,20 @@ const useAuth = () => {
   const refreshToken = () => {
     if (userCred) {
       if (uPool) {
-        console.log('refreshingToken1', { userCred, uPool })
-
         const userPool = new CognitoUserPool(uPool)
         const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
+
         nuser.getSession(
           wrapErr((sess: CognitoUserSession) => {
             if (sess) {
               const refreshToken_ = sess.getRefreshToken()
               nuser.refreshSession(refreshToken_, (err, session: CognitoUserSession) => {
                 if (err) {
-                  console.log('refreshingToken', { refreshToken_ })
                   console.log(err)
                 } else {
                   const token = session.getIdToken().getJwtToken()
                   const payload = session.getIdToken().payload
                   const expiry = session.getIdToken().getExpiration()
-                  console.log('refreshingToken', { refreshToken_, token, payload, expiry })
                   setUserCred({
                     email: userCred.email,
                     username: userCred.username,
@@ -208,8 +220,6 @@ const useAuth = () => {
           attributeList.push(t)
         })
       }
-
-      console.log('Attribute List: ', attributeList)
 
       if (uPool) {
         const userPool = new CognitoUserPool(uPool)
@@ -266,7 +276,6 @@ const useAuth = () => {
           nuser.resendConfirmationCode((err, result) => {
             if (err) reject(err)
             if (result) {
-              console.log({ result })
               resolve('sent successfully')
             }
           })
@@ -362,7 +371,6 @@ const useAuth = () => {
                   result?.forEach((attr) => {
                     if (attr.Name === WorkspaceIDsAttrName) {
                       const newWorkspaceIDs = `${attr.Value}#${workspaceId}`
-                      console.log('Got existing WorkspaceIDs', newWorkspaceIDs)
                       const t = new CognitoUserAttribute({
                         Name: WorkspaceIDsAttrName,
                         Value: newWorkspaceIDs,
