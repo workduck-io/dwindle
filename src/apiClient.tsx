@@ -19,7 +19,8 @@ const refreshToken = () => {
   if (userCred) {
     if (uPool) {
       const userPool = new CognitoUserPool(uPool)
-      const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+      const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
+
       nuser.getSession(
         wrapErr((sess: CognitoUserSession) => {
           if (sess) {
@@ -54,7 +55,7 @@ client.interceptors.response.use(undefined, async (error) => {
   const response = error.response
 
   if (response) {
-    if (response.status === 401 && error.config && !error.config.__isRetryRequest) {
+    if ((response.status === 401 || response.status === 403) && error.config && !error.config.__isRetryRequest) {
       try {
         refreshToken()
       } catch (authError) {
