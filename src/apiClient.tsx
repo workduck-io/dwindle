@@ -55,7 +55,7 @@ client.interceptors.response.use(undefined, async (error) => {
   const response = error.response
 
   if (response) {
-    if ((response.status === 401 || response.status === 403) && error.config && !error.config.__isRetryRequest) {
+    if (response.status === 401 && error.config && !error.config.__isRetryRequest) {
       try {
         refreshToken()
       } catch (authError) {
