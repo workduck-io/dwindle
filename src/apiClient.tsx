@@ -19,7 +19,8 @@ const refreshToken = () => {
   if (userCred) {
     if (uPool) {
       const userPool = new CognitoUserPool(uPool)
-      const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+      const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
+
       nuser.getSession(
         wrapErr((sess: CognitoUserSession) => {
           if (sess) {
@@ -32,7 +33,14 @@ const refreshToken = () => {
                 const payload = session.getIdToken().payload
                 const expiry = session.getIdToken().getExpiration()
                 useAuthStore.setState({
-                  userCred: { email: userCred.email, url: userCred.url, token, expiry, userId: payload.sub },
+                  userCred: {
+                    email: userCred.email,
+                    username: userCred.username,
+                    url: userCred.url,
+                    token,
+                    expiry,
+                    userId: payload.sub,
+                  },
                 })
               }
             })

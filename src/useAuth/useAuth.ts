@@ -1,16 +1,21 @@
 import {
-  CognitoUserPool,
+  AuthenticationDetails,
+  ClientMetadata,
+  CognitoAccessToken,
+  CognitoIdToken,
+  CognitoRefreshToken,
+  CognitoUser,
   CognitoUserAttribute,
+  CognitoUserPool,
+  CognitoUserSession,
   //CognitoUser,
   ICognitoUserPoolData,
-  AuthenticationDetails,
-  CognitoUser,
-  CognitoUserSession,
-  ClientMetadata,
 } from 'amazon-cognito-identity-js'
-import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
-import { useEffect } from 'react'
 import jwtDecode from 'jwt-decode'
+import { useEffect } from 'react'
+import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
+import axios, { AxiosRequestConfig } from 'axios'
+import qs from 'qs'
 
 const AWSRegion = 'us-east-1'
 const WorkspaceIDsAttrName = 'custom:mex_workspace_ids'
@@ -22,7 +27,6 @@ export interface AWSAttribute {
 export function wrapErr<T>(f: (result: T) => void) {
   return (err: any, result: T) => {
     if (err) {
-      console.error({ error: JSON.stringify(err) })
       return
     } else f(result)
   }
@@ -57,20 +61,61 @@ const useAuth = () => {
     }
   }, [userCred])
 
-  const googleSignIn = (idToken: string, accessToken: string) => {
+  const googleSignIn = (code: string, clientId: string, redirectURI: string) => {
     return new Promise((resolve, reject) => {
       try {
-        const decodedIdToken: any = jwtDecode(idToken)
-
-        const nUCred = {
-          email: decodedIdToken.email,
-          userId: decodedIdToken.sub,
-          expiry: decodedIdToken.exp,
-          token: accessToken,
-          url: decodedIdToken.iss,
+        const dataPayload = qs.stringify({
+          grant_type: 'authorization_code',
+          client_id: clientId,
+          redirect_uri: redirectURI,
+          code,
+        })
+        const config: AxiosRequestConfig<any> = {
+          method: 'post',
+          url: 'https://workduck.auth.us-east-1.amazoncognito.com/oauth2/token',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Cookie: 'XSRF-TOKEN=c393745c-a0fa-4858-9777-897c3aff4fbc',
+          },
+          data: dataPayload,
         }
-        setUserCred(nUCred)
-        resolve(nUCred)
+
+        axios(config)
+          .then(function (response) {
+            const tripletTokens: any = response.data
+            const decodedIdToken: any = jwtDecode(tripletTokens?.id_token)
+
+            const nUCred = {
+              email: decodedIdToken.email,
+              userId: decodedIdToken.sub,
+              expiry: decodedIdToken.exp,
+              token: tripletTokens?.id_token,
+              username: decodedIdToken['cognito:username'],
+              url: decodedIdToken.iss,
+            }
+
+            if (uPool) {
+              const userPool = new CognitoUserPool(uPool)
+              const nuser = new CognitoUser({ Username: nUCred.username, Pool: userPool })
+              const uSession = new CognitoUserSession({
+                AccessToken: new CognitoAccessToken({ AccessToken: tripletTokens.access_token }),
+                IdToken: new CognitoIdToken({ IdToken: tripletTokens.id_token }),
+                RefreshToken: new CognitoRefreshToken({ RefreshToken: tripletTokens.refresh_token }),
+              })
+
+              nuser.setSignInUserSession(uSession)
+            }
+
+            setUserCred(nUCred)
+
+            resolve({
+              userCred: nUCred,
+              tokens: tripletTokens,
+            })
+          })
+          .catch(function (error) {
+            reject(error.message || JSON.stringify(error))
+          })
       } catch (error) {
         reject(error.message || JSON.stringify(error))
       }
@@ -97,6 +142,7 @@ const useAuth = () => {
 
             const nUCred = {
               email: email,
+              username: email,
               userId: payload.sub,
               expiry,
               token: idToken,
@@ -119,19 +165,27 @@ const useAuth = () => {
     if (userCred) {
       if (uPool) {
         const userPool = new CognitoUserPool(uPool)
-        const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+        const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
+
         nuser.getSession(
           wrapErr((sess: CognitoUserSession) => {
             if (sess) {
-              const refreshToken = sess.getRefreshToken()
-              nuser.refreshSession(refreshToken, (err, session: CognitoUserSession) => {
+              const refreshToken_ = sess.getRefreshToken()
+              nuser.refreshSession(refreshToken_, (err, session: CognitoUserSession) => {
                 if (err) {
                   console.log(err)
                 } else {
                   const token = session.getIdToken().getJwtToken()
                   const payload = session.getIdToken().payload
                   const expiry = session.getIdToken().getExpiration()
-                  setUserCred({ email: userCred.email, url: userCred.url, token, expiry, userId: payload.sub })
+                  setUserCred({
+                    email: userCred.email,
+                    username: userCred.username,
+                    url: userCred.url,
+                    token,
+                    expiry,
+                    userId: payload.sub,
+                  })
                 }
               })
             }
@@ -166,8 +220,6 @@ const useAuth = () => {
           attributeList.push(t)
         })
       }
-
-      console.log('Attribute List: ', attributeList)
 
       if (uPool) {
         const userPool = new CognitoUserPool(uPool)
@@ -224,7 +276,6 @@ const useAuth = () => {
           nuser.resendConfirmationCode((err, result) => {
             if (err) reject(err)
             if (result) {
-              console.log({ result })
               resolve('sent successfully')
             }
           })
@@ -257,7 +308,7 @@ const useAuth = () => {
       try {
         if (uPool && userCred) {
           const userPool = new CognitoUserPool(uPool)
-          const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+          const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
           nuser.signOut(() => {
             clearStore()
             resolve('Signout Successful')
@@ -275,7 +326,7 @@ const useAuth = () => {
         if (userCred) {
           if (uPool) {
             const userPool = new CognitoUserPool(uPool)
-            const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+            const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
             nuser.getSession(
               wrapErr((sess: CognitoUserSession) => {
                 const attrs = attributes.map((attribute) => {
@@ -310,7 +361,7 @@ const useAuth = () => {
         if (userCred) {
           if (uPool) {
             const userPool = new CognitoUserPool(uPool)
-            const nuser = new CognitoUser({ Username: userCred.email, Pool: userPool })
+            const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
             nuser.getSession(
               // @ts-ignore
               wrapErr((sess: CognitoUserSession) => {
@@ -320,7 +371,6 @@ const useAuth = () => {
                   result?.forEach((attr) => {
                     if (attr.Name === WorkspaceIDsAttrName) {
                       const newWorkspaceIDs = `${attr.Value}#${workspaceId}`
-                      console.log('Got existing WorkspaceIDs', newWorkspaceIDs)
                       const t = new CognitoUserAttribute({
                         Name: WorkspaceIDsAttrName,
                         Value: newWorkspaceIDs,
