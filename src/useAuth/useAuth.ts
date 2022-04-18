@@ -42,6 +42,7 @@ const useAuth = () => {
   // Needs to handle automatic refreshSession
   const setUserCred = useAuthStore((store) => store.setUserCred)
   const userCred = useAuthStore((store) => store.userCred)
+  const getUserCred = useAuthStore((store) => store.getUserCred)
   const clearStore = useAuthStore((store) => store.clearStore)
 
   const initCognito = (poolData: ICognitoUserPoolData) => {
@@ -162,37 +163,47 @@ const useAuth = () => {
   }
 
   const refreshToken = () => {
-    if (userCred) {
-      if (uPool) {
-        const userPool = new CognitoUserPool(uPool)
-        const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
+    return new Promise<any>((resolve, reject) => {
+      const uCred = getUserCred()
+      if (uCred) {
+        if (uPool) {
+          const userPool = new CognitoUserPool(uPool)
+          const nuser = new CognitoUser({ Username: uCred.username, Pool: userPool })
 
-        nuser.getSession(
-          wrapErr((sess: CognitoUserSession) => {
-            if (sess) {
-              const refreshToken_ = sess.getRefreshToken()
-              nuser.refreshSession(refreshToken_, (err, session: CognitoUserSession) => {
-                if (err) {
-                  console.log(err)
-                } else {
-                  const token = session.getIdToken().getJwtToken()
-                  const payload = session.getIdToken().payload
-                  const expiry = session.getIdToken().getExpiration()
-                  setUserCred({
-                    email: userCred.email,
-                    username: userCred.username,
-                    url: userCred.url,
-                    token,
-                    expiry,
-                    userId: payload.sub,
-                  })
-                }
-              })
-            }
-          })
-        )
+          nuser.getSession(
+            wrapErr((sess: CognitoUserSession) => {
+              if (sess) {
+                const refreshToken_ = sess.getRefreshToken()
+                nuser.refreshSession(refreshToken_, (err, session: CognitoUserSession) => {
+                  if (err) {
+                    console.log(err)
+                    reject(err)
+                  } else {
+                    const token = session.getIdToken().getJwtToken()
+                    const payload = session.getIdToken().payload
+                    const expiry = session.getIdToken().getExpiration()
+
+                    console.log('New Token: ', token)
+                    const nUCred = {
+                      email: uCred.email,
+                      username: uCred.username,
+                      url: uCred.url,
+                      token,
+                      expiry,
+                      userId: payload.sub,
+                    }
+
+                    setUserCred(nUCred)
+                    resolve(nUCred)
+                  }
+                })
+              }
+            })
+          )
+        }
       }
-    }
+      reject(`Could not refresh. uCred: ${uCred} | uPool: ${uPool}`)
+    })
   }
 
   const getConfig = () => {

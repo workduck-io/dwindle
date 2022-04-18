@@ -14,9 +14,10 @@ export interface AuthStoreState {
     user: CognitoUser | undefined;
     setUser: (userPool: CognitoUser) => void;
     userCred: UserCred | undefined;
+    getUserCred: () => UserCred | undefined;
     setUserCred: (userCred: UserCred) => void;
     setEmail: (email: string) => void;
     clearStore: () => void;
 }
-declare const useAuthStore: import("zustand").UseStore<AuthStoreState>;
+declare const useAuthStore: import("zustand").UseBoundStore<AuthStoreState, import("zustand").StoreApi<AuthStoreState>>;
 export default useAuthStore;
