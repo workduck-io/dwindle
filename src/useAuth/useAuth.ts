@@ -183,6 +183,7 @@ const useAuth = () => {
                     const payload = session.getIdToken().payload
                     const expiry = session.getIdToken().getExpiration()
 
+                    console.log('New Token: ', token)
                     const nUCred = {
                       email: uCred.email,
                       username: uCred.username,
@@ -201,6 +202,7 @@ const useAuth = () => {
           )
         }
       }
+      reject(`Could not refresh. uCred: ${uCred} | uPool: ${uPool}`)
     })
   }
 
