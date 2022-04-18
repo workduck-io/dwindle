@@ -20,6 +20,7 @@ export interface AuthStoreState {
   user: CognitoUser | undefined
   setUser: (userPool: CognitoUser) => void
   userCred: UserCred | undefined
+  getUserCred: () => UserCred | undefined
   setUserCred: (userCred: UserCred) => void
   setEmail: (email: string) => void
 
@@ -28,7 +29,7 @@ export interface AuthStoreState {
 
 const useAuthStore = create<AuthStoreState>(
   persist(
-    (set) => ({
+    (set, get) => ({
       userPool: undefined,
       user: undefined,
       userCred: undefined,
@@ -38,7 +39,13 @@ const useAuthStore = create<AuthStoreState>(
       setUserPool: (userPool) => set({ userPool }),
       setUser: (user) => set({ user }),
       setEmail: (email) => set({ email }),
-      setUserCred: (userCred) => set({ userCred }),
+      getUserCred: () => {
+        const uCred = get().userCred
+        return uCred
+      },
+      setUserCred: (userCred) => {
+        set({ userCred })
+      },
 
       clearStore: () =>
         set({

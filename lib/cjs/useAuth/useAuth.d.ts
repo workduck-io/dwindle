@@ -20,14 +20,14 @@ declare const useAuth: () => {
     } | undefined;
     changePassword: () => void;
     signOut: () => Promise<string>;
-    refreshToken: () => void;
+    refreshToken: () => Promise<any>;
     userCred: UserCred | undefined;
     getConfig: () => {
         headers: {
             Authorization: string;
         };
     } | undefined;
-    googleSignIn: (idToken: string) => Promise<unknown>;
+    googleSignIn: (code: string, clientId: string, redirectURI: string) => Promise<unknown>;
     updateUserAttributes: (attributes: AWSAttribute[]) => Promise<any>;
     userAddWorkspace: (workspaceId: string) => Promise<any>;
 };
