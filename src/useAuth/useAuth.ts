@@ -295,8 +295,50 @@ const useAuth = () => {
     })
   }
 
-  const forgotPassword = () => {}
-  const verifyForgotPassword = () => {}
+  const forgotPassword = (email: string) => {
+    return new Promise((resolve, reject) => {
+      if (uPool) {
+        setEmail(email)
+        const cognitoUser = new CognitoUser({
+          Username: email,
+          Pool: new CognitoUserPool(uPool),
+        })
+
+        // call forgotPassword on cognitoUser
+        cognitoUser.forgotPassword({
+          onSuccess: function (result) {
+            resolve(result)
+          },
+          onFailure: function (err) {
+            reject(err)
+          },
+        })
+      }
+    })
+  }
+  const verifyForgotPassword = (verificationCode: string, newPassword: string) => {
+    return new Promise((resolve, reject) => {
+      if (email) {
+        if (uPool) {
+          console.log({ email, uPool })
+          console.log({ verificationCode, newPassword })
+
+          const cognitoUser = new CognitoUser({
+            Username: email,
+            Pool: new CognitoUserPool(uPool),
+          })
+          cognitoUser.confirmPassword(verificationCode, newPassword, {
+            onFailure(err) {
+              reject(err)
+            },
+            onSuccess(res) {
+              resolve(res)
+            },
+          })
+        }
+      }
+    })
+  }
 
   const getUserDetails = (): { email: string } | undefined => {
     if (userCred) {
