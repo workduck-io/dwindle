@@ -13,8 +13,8 @@ declare const useAuth: () => {
     }>;
     verifySignUp: (code: string, metadata?: ClientMetadata) => Promise<any>;
     resendCode: () => Promise<string>;
-    forgotPassword: () => void;
-    verifyForgotPassword: () => void;
+    forgotPassword: (email: string) => Promise<unknown>;
+    verifyForgotPassword: (verificationCode: string, newPassword: string) => Promise<unknown>;
     getUserDetails: () => {
         email: string;
     } | undefined;
