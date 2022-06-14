@@ -1,14 +1,21 @@
 import { CognitoUser, CognitoUserPool, CognitoUserSession } from 'amazon-cognito-identity-js'
 import axios from 'axios'
+import { customAlphabet } from 'nanoid'
+
 import useAuthStore from './AuthStore/useAuthStore'
 import { wrapErr } from './useAuth/useAuth'
 
 const client = axios.create()
 
+const nolookalikes = '346789ABCDEFGHJKLMNPQRTUVWXYabcdefghijkmnpqrtwxyz'
+const nanoid = customAlphabet(nolookalikes, 21)
+const generateRequestID = () => `REQUEST_${nanoid()}`
+
 client.interceptors.request.use((request) => {
   const userCred = useAuthStore.getState().userCred
   if (request && request.headers && userCred && userCred.token) {
     request.headers['Authorization'] = `Bearer ${userCred.token}`
+    request.headers['wd-request-id'] = request.headers['wd-request-id'] ?? generateRequestID()
   }
 
   return request
