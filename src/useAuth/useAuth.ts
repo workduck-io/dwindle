@@ -197,12 +197,11 @@ const useAuth = () => {
                     resolve(nUCred)
                   }
                 })
-              }
+              } else reject("There's no User session")
             })
           )
-        }
-      }
-      reject(`Could not refresh. uCred: ${uCred} | uPool: ${uPool}`)
+        } else reject('Not in user pool')
+      } else reject(`Could not refresh. uCred: ${uCred} | uPool: ${uPool}`)
     })
   }
 
