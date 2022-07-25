@@ -1,4 +1,4 @@
-import { CognitoUser, ICognitoUserPoolData } from 'amazon-cognito-identity-js';
+import { ICognitoUserPoolData } from 'amazon-cognito-identity-js';
 export interface UserCred {
     email: string;
     userId: string;
@@ -11,8 +11,6 @@ export interface AuthStoreState {
     userPool: ICognitoUserPoolData | undefined;
     setUserPool: (userPool: ICognitoUserPoolData) => void;
     email: string | undefined;
-    user: CognitoUser | undefined;
-    setUser: (userPool: CognitoUser) => void;
     userCred: UserCred | undefined;
     getUserCred: () => UserCred | undefined;
     setUserCred: (userCred: UserCred) => void;
