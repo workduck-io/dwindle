@@ -37,7 +37,7 @@ const useAuth = () => {
   const email = useAuthStore((store) => store.email)
   const setUserPool = useAuthStore((store) => store.setUserPool)
 
-  const setUser = useAuthStore((store) => store.setUser)
+  // const setUser = useAuthStore((store) => store.setUser)
   const setEmail = useAuthStore((store) => store.setEmail)
   // Needs to handle automatic refreshSession
   const setUserCred = useAuthStore((store) => store.setUserCred)
@@ -241,9 +241,9 @@ const useAuth = () => {
             reject(err)
           }
           if (result) {
-            const cognitoUser = result.user
+            // const cognitoUser = result.user
             setEmail(email)
-            setUser(cognitoUser)
+            // setUser(cognitoUser)
             resolve({ email })
           }
         })
