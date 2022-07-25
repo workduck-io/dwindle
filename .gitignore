@@ -91,6 +91,8 @@ out/
 # Random dists
 src/dist/
 
+/lib
+
 # Lock files
 *.lock
 
