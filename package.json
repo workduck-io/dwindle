@@ -21,6 +21,11 @@
       "lib/**/*"
     ]
   },
+  "exports": {
+    "import": "./lib/esm/index.js",
+    "require": "./lib/cjs/index.js",
+    "default": "./lib/esm/index.js"
+  },
   "homepage": "https://github.com/workduck-io/dwindle#readme",
   "devDependencies": {
     "@types/qs": "^6.9.7",
