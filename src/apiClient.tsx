@@ -1,4 +1,4 @@
-import { CognitoUser, CognitoUserPool, CognitoUserSession } from 'amazon-cognito-identity-js'
+import { CognitoUserPool, CognitoUserSession } from 'amazon-cognito-identity-js'
 import axios from 'axios'
 import { customAlphabet } from 'nanoid'
 
@@ -23,11 +23,12 @@ client.interceptors.request.use((request) => {
 
 const refreshToken = () => {
   const { userCred, userPool: uPool } = useAuthStore.getState()
+  console.log('INTERCEPTOR', { userCred, uPool })
   if (userCred) {
     if (uPool) {
       const userPool = new CognitoUserPool(uPool)
-      const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
-
+      const nuser = userPool.getCurrentUser()!
+      if (!nuser) throw new Error('Session non existant')
       nuser.getSession(
         wrapErr((sess: CognitoUserSession) => {
           if (sess) {
