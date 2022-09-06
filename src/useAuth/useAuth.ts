@@ -11,11 +11,10 @@ import {
   //CognitoUser,
   ICognitoUserPoolData,
 } from 'amazon-cognito-identity-js'
-import jwtDecode from 'jwt-decode'
-import { useEffect } from 'react'
-import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
 import axios, { AxiosRequestConfig } from 'axios'
+import jwtDecode from 'jwt-decode'
 import qs from 'qs'
+import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
 
 const AWSRegion = 'us-east-1'
 const WorkspaceIDsAttrName = 'custom:mex_workspace_ids'
@@ -52,15 +51,6 @@ const useAuth = () => {
     }
     return
   }
-
-  // Handles refreshing of the token on every update of UserCred
-  // client also refreshes the token if a request returns 401
-  useEffect(() => {
-    const now = Math.floor(Date.now() / 1000)
-    if (userCred) {
-      if (userCred.expiry < now) refreshToken()
-    }
-  }, [userCred])
 
   const googleSignIn = (code: string, clientId: string, redirectURI: string) => {
     return new Promise((resolve, reject) => {
@@ -165,10 +155,12 @@ const useAuth = () => {
   const refreshToken = () => {
     return new Promise<any>((resolve, reject) => {
       const uCred = getUserCred()
+      const uPool = useAuthStore.getState().userPool
       if (uCred) {
         if (uPool) {
           const userPool = new CognitoUserPool(uPool)
-          const nuser = new CognitoUser({ Username: uCred.username, Pool: userPool })
+          const nuser = userPool.getCurrentUser()!
+          if (!nuser) reject('User session does not exist')
 
           nuser.getSession(
             wrapErr((sess: CognitoUserSession) => {
