@@ -1,6 +1,6 @@
 {
   "name": "@workduck-io/dwindle",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "AWS requests for HTTP",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
