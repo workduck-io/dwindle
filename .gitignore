@@ -93,9 +93,6 @@ src/dist/
 
 /lib
 
-# Lock files
-*.lock
-
 .eslintignore
 
 CHANGELOG.md
