@@ -162,36 +162,23 @@ const useAuth = () => {
           const nuser = userPool.getCurrentUser()!
           if (!nuser) reject('User session does not exist')
 
-          nuser.getSession(
-            wrapErr((sess: CognitoUserSession) => {
-              if (sess) {
-                const refreshToken_ = sess.getRefreshToken()
-                nuser.refreshSession(refreshToken_, (err, session: CognitoUserSession) => {
-                  if (err) {
-                    console.log(err)
-                    reject(err)
-                  } else {
-                    const token = session.getIdToken().getJwtToken()
-                    const payload = session.getIdToken().payload
-                    const expiry = session.getIdToken().getExpiration()
-
-                    console.log('New Token: ', token)
-                    const nUCred = {
-                      email: uCred.email,
-                      username: uCred.username,
-                      url: uCred.url,
-                      token,
-                      expiry,
-                      userId: payload.sub,
-                    }
-
-                    setUserCred(nUCred)
-                    resolve(nUCred)
-                  }
-                })
-              } else reject("There's no User session")
+          nuser.getSession((err: any, session: any) => {
+            if (err) reject(err)
+            const token = session.getIdToken().getJwtToken()
+            const payload = session.getIdToken().payload
+            const expiry = session.getIdToken().getExpiration()
+            useAuthStore.setState({
+              userCred: {
+                email: uCred.email,
+                username: uCred.username,
+                url: uCred.url,
+                token,
+                expiry,
+                userId: payload.sub,
+              },
             })
-          )
+            resolve(session)
+          })
         } else reject('Not in user pool')
       } else reject(`Could not refresh. uCred: ${uCred} | uPool: ${uPool}`)
     })

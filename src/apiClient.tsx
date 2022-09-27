@@ -1,9 +1,9 @@
-import { CognitoUserPool, CognitoUserSession } from 'amazon-cognito-identity-js'
+import { CognitoUserPool } from 'amazon-cognito-identity-js'
 import axios from 'axios'
 import { customAlphabet } from 'nanoid'
 
 import useAuthStore from './AuthStore/useAuthStore'
-import { wrapErr } from './useAuth/useAuth'
+import { useFailedRequestStore } from './AuthStore/useAuthStore'
 
 const client = axios.create()
 
@@ -21,7 +21,7 @@ client.interceptors.request.use((request) => {
   return request
 })
 
-const refreshToken = () => {
+const refreshToken = async () => {
   const { userCred, userPool: uPool } = useAuthStore.getState()
   console.log('INTERCEPTOR', { userCred, uPool })
   if (userCred) {
@@ -29,34 +29,54 @@ const refreshToken = () => {
       const userPool = new CognitoUserPool(uPool)
       const nuser = userPool.getCurrentUser()!
       if (!nuser) throw new Error('Session non existant')
-      nuser.getSession(
-        wrapErr((sess: CognitoUserSession) => {
-          if (sess) {
-            const refreshToken = sess.getRefreshToken()
-            nuser.refreshSession(refreshToken, (err, session: CognitoUserSession) => {
-              if (err) {
-                console.log(err)
-              } else {
-                const token = session.getIdToken().getJwtToken()
-                const payload = session.getIdToken().payload
-                const expiry = session.getIdToken().getExpiration()
-                useAuthStore.setState({
-                  userCred: {
-                    email: userCred.email,
-                    username: userCred.username,
-                    url: userCred.url,
-                    token,
-                    expiry,
-                    userId: payload.sub,
-                  },
-                })
-              }
-            })
-          }
+      // All aws cognito user pool methods are async, so we need to use await
+      return new Promise((resolve, reject) => {
+        nuser.getSession((err: any, session: any) => {
+          if (err) reject(err)
+          const token = session.getIdToken().getJwtToken()
+          const payload = session.getIdToken().payload
+          const expiry = session.getIdToken().getExpiration()
+          useAuthStore.setState({
+            userCred: {
+              email: userCred.email,
+              username: userCred.username,
+              url: userCred.url,
+              token,
+              expiry,
+              userId: payload.sub,
+            },
+          })
+          useFailedRequestStore.setState({
+            isRefreshing: false,
+          })
+          processQueue(null, {
+            userCred: {
+              email: userCred.email,
+              username: userCred.username,
+              url: userCred.url,
+              token,
+              expiry,
+              userId: payload.sub,
+            },
+          })
+          resolve(session)
         })
-      )
+      })
     }
   }
+}
+
+const processQueue = async (error: any, userCred: any) => {
+  useFailedRequestStore.getState().failedRequests.forEach((prom: any) => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve(userCred)
+    }
+  })
+  useFailedRequestStore.setState({
+    failedRequests: [],
+  })
 }
 
 client.interceptors.response.use(undefined, async (error) => {
@@ -64,14 +84,20 @@ client.interceptors.response.use(undefined, async (error) => {
 
   if (response) {
     if (response.status === 401 && error.config && !error.config.__isRetryRequest) {
-      try {
-        refreshToken()
-      } catch (authError) {
-        // refreshing has failed, but report the original error, i.e. 401
-        return Promise.reject(error)
+      // checking isRefreshTokenInProgress to prevent multiple refresh token calls
+      if (useFailedRequestStore.getState().isRefreshing) {
+        try {
+          await new Promise((resolve, reject) => {
+            useFailedRequestStore.getState().addFailedRequest({ resolve, reject })
+          })
+          return client(error.config)
+        } catch (error) {
+          console.log('REFRESH TOKEN ERROR', error)
+        }
       }
 
-      // retry the original request
+      useFailedRequestStore.getState().setIsRefreshing(true)
+      await refreshToken()
       error.config.__isRetryRequest = true
       return client(error.config)
     }
