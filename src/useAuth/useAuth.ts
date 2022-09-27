@@ -14,7 +14,8 @@ import {
 import axios, { AxiosRequestConfig } from 'axios'
 import jwtDecode from 'jwt-decode'
 import qs from 'qs'
-import useAuthStore, { UserCred } from '../AuthStore/useAuthStore'
+import useAuthStore, { useFailedRequestStore, UserCred } from '../AuthStore/useAuthStore'
+import { processQueue } from '../utils/queue'
 
 const AWSRegion = 'us-east-1'
 const WorkspaceIDsAttrName = 'custom:mex_workspace_ids'
@@ -154,33 +155,54 @@ const useAuth = () => {
 
   const refreshToken = () => {
     return new Promise<any>((resolve, reject) => {
-      const uCred = getUserCred()
+      const userCred = getUserCred()
       const uPool = useAuthStore.getState().userPool
-      if (uCred) {
+      if (userCred) {
         if (uPool) {
           const userPool = new CognitoUserPool(uPool)
           const nuser = userPool.getCurrentUser()!
           if (!nuser) reject('User session does not exist')
 
-          nuser.getSession((err: any, session: any) => {
+          nuser.getSession(async (err: any, session: any) => {
             if (err) reject(err)
-            const token = session.getIdToken().getJwtToken()
-            const payload = session.getIdToken().payload
-            const expiry = session.getIdToken().getExpiration()
-            useAuthStore.setState({
-              userCred: {
-                email: uCred.email,
-                username: uCred.username,
-                url: uCred.url,
-                token,
-                expiry,
-                userId: payload.sub,
-              },
+            const refreshToken_ = session.getRefreshToken()
+            await new Promise((resolve, reject) => {
+              nuser.refreshSession(refreshToken_, (err: any, session: any) => {
+                if (err) reject(err)
+                const token = session.getIdToken().getJwtToken()
+                const payload = session.getIdToken().payload
+                const expiry = session.getIdToken().getExpiration()
+
+                const nUCred = {
+                  email: userCred.email,
+                  username: userCred.username,
+                  url: userCred.url,
+                  token,
+                  expiry,
+                  userId: payload.sub,
+                }
+                useFailedRequestStore.setState({
+                  isRefreshing: false,
+                })
+                processQueue(null, {
+                  userCred: {
+                    email: userCred.email,
+                    username: userCred.username,
+                    url: userCred.url,
+                    token,
+                    expiry,
+                    userId: payload.sub,
+                  },
+                })
+                setUserCred(nUCred)
+                resolve(nUCred)
+              })
             })
+
             resolve(session)
           })
         } else reject('Not in user pool')
-      } else reject(`Could not refresh. uCred: ${uCred} | uPool: ${uPool}`)
+      } else reject(`Could not refresh. uCred: ${userCred} | uPool: ${uPool}`)
     })
   }
 

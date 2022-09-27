@@ -4,6 +4,7 @@ import { customAlphabet } from 'nanoid'
 
 import useAuthStore from './AuthStore/useAuthStore'
 import { useFailedRequestStore } from './AuthStore/useAuthStore'
+import { processQueue } from './utils/queue'
 
 const client = axios.create()
 
@@ -64,19 +65,6 @@ const refreshToken = async () => {
       })
     }
   }
-}
-
-const processQueue = async (error: any, userCred: any) => {
-  useFailedRequestStore.getState().failedRequests.forEach((prom: any) => {
-    if (error) {
-      prom.reject(error)
-    } else {
-      prom.resolve(userCred)
-    }
-  })
-  useFailedRequestStore.setState({
-    failedRequests: [],
-  })
 }
 
 client.interceptors.response.use(undefined, async (error) => {
