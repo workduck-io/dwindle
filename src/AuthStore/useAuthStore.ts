@@ -32,6 +32,15 @@ export interface AuthStoreState {
   clearStore: () => void
 }
 
+export interface FailedRequestState {
+  // Handling failed requests
+  failedRequests: Array<any>
+  setFailedRequests: (failedRequests: Array<any>) => void
+  addFailedRequest: (failedRequest: any) => void
+  isRefreshing: boolean
+  setIsRefreshing: (isRefreshing: boolean) => void
+}
+
 const useAuthStore = create<AuthStoreState>(
   persist(
     (set, get) => ({
@@ -62,5 +71,17 @@ const useAuthStore = create<AuthStoreState>(
     { name: 'auth-aws' }
   )
 )
+
+export const useFailedRequestStore = create<FailedRequestState>((set) => ({
+  // failed requests handling
+  failedRequests: [],
+  setFailedRequests: (failedRequests: Array<any>) => set({ failedRequests }),
+  addFailedRequest: (failedRequest: any) =>
+    set((state) => ({
+      failedRequests: [...state.failedRequests, failedRequest],
+    })),
+  isRefreshing: false,
+  setIsRefreshing: (isRefreshing: boolean) => set({ isRefreshing }),
+}))
 
 export default useAuthStore
