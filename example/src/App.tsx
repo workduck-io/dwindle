@@ -1,7 +1,16 @@
-import { useAuth, client } from '@workduck-io/dwindle'
+// @ts-ignore
 import React, { useEffect, useState } from 'react'
 
+import { useAuth, client } from '@workduck-io/dwindle'
+
 import { Login, Register, CustomAttributes } from './Auth'
+import { FileUploader } from './FileUploader'
+
+const cognitoPoolID = import.meta.env.VITE_APP_COGNITO_POOL_ID
+const cognitoClientID = import.meta.env.VITE_APP_COGNITO_CLIENT_ID
+const identityPoolID = import.meta.env.VITE_APP_COGNITO_IDENTITY_POOL_ID
+const identityProvider = import.meta.env.VITE_APP_COGNITO_IDENTITY_PROVIDER
+const region = 'us-east-1'
 
 function App() {
   const { refreshToken, userCred, initCognito, signOut } = useAuth()
@@ -11,8 +20,8 @@ function App() {
   useEffect(() => {
     // Make sure to initialize the lib rary with the respective keys
     // before calling functions to client or authentication
-    initCognito({ UserPoolId: 'COGNITO_USER_POOL_ID', ClientId: 'COGNITO_CLIENT_ID' }, '')
-    console.log('Cognito Initialized')
+    initCognito({ UserPoolId: cognitoPoolID, ClientId: cognitoClientID }, identityPoolID)
+    console.log('Cognito Initialized', { cognitoClientID, cognitoPoolID, identityPoolID })
   }, []) // eslint-disable-line
 
   const showUserDetails = (e: any) => {
@@ -30,8 +39,6 @@ function App() {
 
   const sendRequest = (e: any) => {
     e.preventDefault()
-    // Make sure to init Cognito and have the user logged in before calling a protected route
-    // The library refreshes the tokens automatically on 401.
     client
       .get('https://your.aws.api/route')
       .then((d) => console.log(d))
@@ -64,6 +71,7 @@ function App() {
         <CustomAttributes />
         <button onClick={sendRequest}>Send requests</button>
         <button onClick={logout}>Logout!</button>
+        <FileUploader />
       </header>
     </div>
   )

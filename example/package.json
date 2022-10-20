@@ -3,9 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@workduck-io/dwindle": "link:..",
+    "@workduck-io/dwindle": "file:../lib/esm",
     "axios": "^0.23.0",
-    "cognito-http": "link:..",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.23.0"

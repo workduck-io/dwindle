@@ -1,3 +1,6 @@
+import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity'
+import { GetObjectCommand, ListObjectsCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { fromCognitoIdentityPool as FromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity'
 import {
   AuthenticationDetails,
   ClientMetadata,
@@ -7,23 +10,36 @@ import {
   CognitoUser,
   CognitoUserAttribute,
   CognitoUserPool,
-  CognitoUserSession,
-  //CognitoUser,
+  CognitoUserSession, //CognitoUser,
   ICognitoUserPoolData,
 } from 'amazon-cognito-identity-js'
-import { fromCognitoIdentityPool as FromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity'
-import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity'
 import axios, { AxiosRequestConfig } from 'axios'
 import jwtDecode from 'jwt-decode'
+import { customAlphabet } from 'nanoid'
 import qs from 'qs'
+
 import useAuthStore, { IdentityPoolData, useFailedRequestStore, UserCred } from '../AuthStore/useAuthStore'
 import { processQueue } from '../utils/queue'
+
+const nolookalikes = '346789ABCDEFGHJKLMNPQRTUVWXYabcdefghijkmnpqrtwxyz'
+const nanoid = customAlphabet(nolookalikes, 20)
+
+const randomFileName = () => {
+  const s = nanoid()
+  return s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8, 12) + '-' + s.slice(12)
+}
 
 const AWSRegion = 'us-east-1'
 const WorkspaceIDsAttrName = 'custom:mex_workspace_ids'
 export interface AWSAttribute {
   Name: string
   Value: string
+}
+
+interface S3UploadOptions {
+  bucket?: string
+  fileType?: string
+  giveCloudFrontURL?: boolean
 }
 
 export function wrapErr<T>(f: (result: T) => void) {
@@ -37,9 +53,11 @@ export function wrapErr<T>(f: (result: T) => void) {
 const useAuth = () => {
   const uPool = useAuthStore((store) => store.userPool)
   const iPool = useAuthStore((store) => store.iPool)
+  const iPoolCreds = useAuthStore((store) => store.iPoolCreds)
   const email = useAuthStore((store) => store.email)
   const setUserPool = useAuthStore((store) => store.setUserPool)
   const setIPool = useAuthStore((store) => store.setIPool)
+  const setIPoolCreds = useAuthStore((store) => store.setIPoolCreds)
   // const setUser = useAuthStore((store) => store.setUser)
   const setEmail = useAuthStore((store) => store.setEmail)
   // Needs to handle automatic refreshSession
@@ -59,6 +77,7 @@ const useAuth = () => {
         identityPoolID: identityPoolID,
         identityProvider: `cognito-idp.${AWSRegion}.amazonaws.com/${poolData.UserPoolId}`,
       }
+
       setIPool(iPoolData)
     }
 
@@ -111,6 +130,7 @@ const useAuth = () => {
             }
 
             setUserCred(nUCred)
+            refreshIdentityPoolCreds()
 
             resolve({
               userCred: nUCred,
@@ -154,6 +174,7 @@ const useAuth = () => {
             }
 
             setUserCred(nUCred)
+            refreshIdentityPoolCreds()
             resolve(nUCred)
           },
 
@@ -207,6 +228,7 @@ const useAuth = () => {
                   },
                 })
                 setUserCred(nUCred)
+                refreshIdentityPoolCreds()
                 resolve(nUCred)
               })
             })
@@ -457,7 +479,7 @@ const useAuth = () => {
     })
   }
 
-  const getIdentityPoolCreds = async (): Promise<any> => {
+  const refreshIdentityPoolCreds = async (): Promise<void> => {
     const token = useAuthStore.getState().userCred?.token
     if (iPool && token) {
       const identityClient = new CognitoIdentityClient({
@@ -472,8 +494,33 @@ const useAuth = () => {
       })
 
       const credentials = await creds()
-      return credentials
+      setIPoolCreds(credentials)
     }
+  }
+
+  const uploadImageToS3 = async (image: File, options?: S3UploadOptions): Promise<any> => {
+    options = { bucket: 'upload-image-cognito-test', fileType: 'image/png', ...options }
+
+    const s3Client = new S3Client({
+      region: AWSRegion,
+      credentials: iPoolCreds,
+    })
+
+    const filePath = `public/${randomFileName()}`
+    const res = await s3Client
+      .send(
+        new PutObjectCommand({
+          Bucket: options.bucket,
+          Key: filePath,
+          Body: image,
+          ContentType: options.fileType,
+        })
+      )
+      .catch((error) => {
+        return { error: error }
+      })
+
+    console.log('Res: ', res)
   }
 
   return {
@@ -493,7 +540,8 @@ const useAuth = () => {
     googleSignIn,
     updateUserAttributes,
     userAddWorkspace,
-    getIdentityPoolCreds,
+    refreshIdentityPoolCreds,
+    uploadImageToS3,
   }
 }
 

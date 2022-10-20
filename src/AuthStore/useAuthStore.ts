@@ -1,3 +1,4 @@
+import { CognitoIdentityCredentials } from '@aws-sdk/credential-provider-cognito-identity'
 import {
   // CognitoUser,
   ICognitoUserPoolData,
@@ -22,8 +23,10 @@ export interface IdentityPoolData {
 export interface AuthStoreState {
   userPool: ICognitoUserPoolData | undefined
   iPool: IdentityPoolData | undefined
+  iPoolCreds: CognitoIdentityCredentials | undefined
   setUserPool: (userPool: ICognitoUserPoolData) => void
   setIPool: (iPoolData: IdentityPoolData) => void
+  setIPoolCreds: (iPoolCreds: CognitoIdentityCredentials) => void
   email: string | undefined
 
   // Removed `user` state because of all stores being copied inside of it
@@ -52,6 +55,7 @@ const useAuthStore = create<AuthStoreState>(
     (set, get) => ({
       userPool: undefined,
       iPool: undefined,
+      iPoolCreds: undefined,
       // user: undefined,
       userCred: undefined,
 
@@ -68,7 +72,9 @@ const useAuthStore = create<AuthStoreState>(
       setUserCred: (userCred) => {
         set({ userCred })
       },
-
+      setIPoolCreds: (iPoolCreds) => {
+        set({ iPoolCreds })
+      },
       clearStore: () =>
         set({
           // user: undefined,
