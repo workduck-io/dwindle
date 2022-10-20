@@ -17,7 +17,7 @@ export const FileUploader = () => {
     const fr = new FileReader()
     fr.onload = async (r) => {
       console.log('OnSubmit', { image, data, imageBase64: r.target.result })
-      const uploadedImage = await uploadImageToS3(image, { fileType: image.type })
+      const uploadedImage = await uploadImageToS3(r.target.result as string, { fileType: image.type })
     }
     fr.readAsDataURL(image)
   }

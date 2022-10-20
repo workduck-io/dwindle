@@ -498,7 +498,7 @@ const useAuth = () => {
     }
   }
 
-  const uploadImageToS3 = async (image: File, options?: S3UploadOptions): Promise<any> => {
+  const uploadImageToS3 = async (base64Buffer: string, options?: S3UploadOptions): Promise<any> => {
     options = { bucket: 'upload-image-cognito-test', fileType: 'image/png', ...options }
 
     const s3Client = new S3Client({
@@ -512,7 +512,8 @@ const useAuth = () => {
         new PutObjectCommand({
           Bucket: options.bucket,
           Key: filePath,
-          Body: image,
+          ContentEncoding: 'base64',
+          Body: base64Buffer,
           ContentType: options.fileType,
         })
       )
