@@ -14,10 +14,16 @@ export interface UserCred {
   username: string
 }
 
+export interface IdentityPoolData {
+  identityPoolID: string
+  identityProvider: string
+}
+
 export interface AuthStoreState {
   userPool: ICognitoUserPoolData | undefined
+  iPool: IdentityPoolData | undefined
   setUserPool: (userPool: ICognitoUserPoolData) => void
-
+  setIPool: (iPoolData: IdentityPoolData) => void
   email: string | undefined
 
   // Removed `user` state because of all stores being copied inside of it
@@ -45,12 +51,14 @@ const useAuthStore = create<AuthStoreState>(
   persist(
     (set, get) => ({
       userPool: undefined,
+      iPool: undefined,
       // user: undefined,
       userCred: undefined,
 
       email: undefined,
 
       setUserPool: (userPool) => set({ userPool }),
+      setIPool: (iPool) => set({ iPool }),
       // setUser: (user) => set({ user }),
       setEmail: (email) => set({ email }),
       getUserCred: () => {

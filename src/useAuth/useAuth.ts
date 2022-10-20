@@ -11,10 +11,12 @@ import {
   //CognitoUser,
   ICognitoUserPoolData,
 } from 'amazon-cognito-identity-js'
+import { fromCognitoIdentityPool as FromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity'
+import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity'
 import axios, { AxiosRequestConfig } from 'axios'
 import jwtDecode from 'jwt-decode'
 import qs from 'qs'
-import useAuthStore, { useFailedRequestStore, UserCred } from '../AuthStore/useAuthStore'
+import useAuthStore, { IdentityPoolData, useFailedRequestStore, UserCred } from '../AuthStore/useAuthStore'
 import { processQueue } from '../utils/queue'
 
 const AWSRegion = 'us-east-1'
@@ -34,9 +36,10 @@ export function wrapErr<T>(f: (result: T) => void) {
 
 const useAuth = () => {
   const uPool = useAuthStore((store) => store.userPool)
+  const iPool = useAuthStore((store) => store.iPool)
   const email = useAuthStore((store) => store.email)
   const setUserPool = useAuthStore((store) => store.setUserPool)
-
+  const setIPool = useAuthStore((store) => store.setIPool)
   // const setUser = useAuthStore((store) => store.setUser)
   const setEmail = useAuthStore((store) => store.setEmail)
   // Needs to handle automatic refreshSession
@@ -45,11 +48,20 @@ const useAuth = () => {
   const getUserCred = useAuthStore((store) => store.getUserCred)
   const clearStore = useAuthStore((store) => store.clearStore)
 
-  const initCognito = (poolData: ICognitoUserPoolData) => {
+  const initCognito = (poolData: ICognitoUserPoolData, identityPoolID?: string) => {
     setUserPool(poolData)
     if (userCred) {
       return userCred.email
     }
+
+    if (identityPoolID) {
+      const iPoolData: IdentityPoolData = {
+        identityPoolID: identityPoolID,
+        identityProvider: `cognito-idp.${AWSRegion}.amazonaws.com/${poolData.UserPoolId}`,
+      }
+      setIPool(iPoolData)
+    }
+
     return
   }
 
@@ -316,6 +328,7 @@ const useAuth = () => {
       }
     })
   }
+
   const verifyForgotPassword = (verificationCode: string, newPassword: string) => {
     return new Promise((resolve, reject) => {
       if (email) {
@@ -416,7 +429,6 @@ const useAuth = () => {
             const userPool = new CognitoUserPool(uPool)
             const nuser = new CognitoUser({ Username: userCred.username, Pool: userPool })
             nuser.getSession(
-              // @ts-ignore
               wrapErr((sess: CognitoUserSession) => {
                 nuser.getUserAttributes((err, result) => {
                   if (err) reject(`Error: ${err.message}`)
@@ -428,7 +440,6 @@ const useAuth = () => {
                         Name: WorkspaceIDsAttrName,
                         Value: newWorkspaceIDs,
                       })
-                      // @ts-ignore
                       nuser.updateAttributes([t], (err, result) => {
                         if (err) reject(`Error: ${err.message}`)
                         resolve('WorkspaceID Added Successfully')
@@ -444,6 +455,25 @@ const useAuth = () => {
         reject(error)
       }
     })
+  }
+
+  const getIdentityPoolCreds = async (): Promise<any> => {
+    const token = useAuthStore.getState().userCred?.token
+    if (iPool && token) {
+      const identityClient = new CognitoIdentityClient({
+        region: AWSRegion,
+      })
+      const creds = FromCognitoIdentityPool({
+        client: identityClient,
+        identityPoolId: iPool.identityPoolID,
+        logins: {
+          [iPool.identityProvider]: token,
+        },
+      })
+
+      const credentials = await creds()
+      return credentials
+    }
   }
 
   return {
@@ -463,6 +493,7 @@ const useAuth = () => {
     googleSignIn,
     updateUserAttributes,
     userAddWorkspace,
+    getIdentityPoolCreds,
   }
 }
 
