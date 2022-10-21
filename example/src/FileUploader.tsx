@@ -9,6 +9,7 @@ interface ImageUploadFormDetails {
 }
 
 export const FileUploader = () => {
+  const [imageURL, setImageURL] = useState<string>()
   const { register, handleSubmit } = useForm<ImageUploadFormDetails>()
   const { uploadImageToS3 } = useAuth()
 
@@ -17,7 +18,11 @@ export const FileUploader = () => {
     const fr = new FileReader()
     fr.onload = async (r) => {
       console.log('OnSubmit', { image, data, imageBase64: r.target.result })
-      const uploadedImage = await uploadImageToS3(r.target.result as string, { fileType: image.type })
+      const uploadedImagURL = await uploadImageToS3(r.target.result as string, {
+        fileType: image.type,
+        giveCloudFrontURL: true,
+      })
+      setImageURL(uploadedImagURL)
     }
     fr.readAsDataURL(image)
   }
@@ -29,6 +34,7 @@ export const FileUploader = () => {
         <input type="file" name="image" {...register('image')} />
         <button>Submit</button>
       </form>
+      <p>{imageURL && <p>{imageURL}</p>}</p>
     </>
   )
 }

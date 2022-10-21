@@ -14,6 +14,7 @@ import {
   ICognitoUserPoolData,
 } from 'amazon-cognito-identity-js'
 import axios, { AxiosRequestConfig } from 'axios'
+import { Buffer } from 'buffer/'
 import jwtDecode from 'jwt-decode'
 import { customAlphabet } from 'nanoid'
 import qs from 'qs'
@@ -504,13 +505,15 @@ const useAuth = () => {
     }
   }
 
-  const uploadImageToS3 = async (base64Buffer: string, options?: S3UploadOptions): Promise<string> => {
-    options = { bucket: 'workduck-app-files', fileType: 'image/png', giveCloudFrontURL: true, ...options }
+  const uploadImageToS3 = async (base64string: string, options?: S3UploadOptions): Promise<string> => {
+    options = { bucket: 'workduck-app-files', fileType: 'image/jpeg', giveCloudFrontURL: true, ...options }
 
     const s3Client = new S3Client({
       region: AWSRegion,
       credentials: iPoolCreds,
     })
+    const parsedImage = base64string.split(',')[1]
+    const buffer = Buffer.from(parsedImage, 'base64')
 
     const filePath = `public/${randomFileName()}`
     await s3Client
@@ -518,8 +521,7 @@ const useAuth = () => {
         new PutObjectCommand({
           Bucket: options.bucket,
           Key: filePath,
-          ContentEncoding: 'base64',
-          Body: base64Buffer,
+          Body: buffer,
           ContentType: options.fileType,
         })
       )

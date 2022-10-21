@@ -20,7 +20,10 @@ function App() {
   useEffect(() => {
     // Make sure to initialize the lib rary with the respective keys
     // before calling functions to client or authentication
-    initCognito({ UserPoolId: cognitoPoolID, ClientId: cognitoClientID }, identityPoolID)
+    initCognito(
+      { UserPoolId: cognitoPoolID, ClientId: cognitoClientID },
+      { identityPoolID: identityPoolID, CDN_BASE_URL: 'https://cdn.workduck.io' }
+    )
     console.log('Cognito Initialized', { cognitoClientID, cognitoPoolID, identityPoolID })
   }, []) // eslint-disable-line
 
