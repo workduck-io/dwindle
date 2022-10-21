@@ -3,8 +3,8 @@ import {
   // CognitoUser,
   ICognitoUserPoolData,
 } from 'amazon-cognito-identity-js'
-import create from 'zustand'
-import { persist } from 'zustand/middleware'
+import create, { GetState, SetState } from 'zustand'
+import { persist, StoreApiWithPersist } from 'zustand/middleware'
 
 export interface UserCred {
   email: string
@@ -51,7 +51,12 @@ export interface FailedRequestState {
   setIsRefreshing: (isRefreshing: boolean) => void
 }
 
-const useAuthStore = create<AuthStoreState>(
+const useAuthStore = create<
+  AuthStoreState,
+  SetState<AuthStoreState>,
+  GetState<AuthStoreState>,
+  StoreApiWithPersist<AuthStoreState>
+>(
   persist(
     (set, get) => ({
       userPool: undefined,

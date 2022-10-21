@@ -1,5 +1,5 @@
 import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity'
-import { GetObjectCommand, ListObjectsCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { fromCognitoIdentityPool as FromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity'
 import {
   AuthenticationDetails,
@@ -18,8 +18,14 @@ import { Buffer } from 'buffer/'
 import jwtDecode from 'jwt-decode'
 import { customAlphabet } from 'nanoid'
 import qs from 'qs'
+import { PersistOptions } from 'zustand/middleware'
 
-import useAuthStore, { IdentityPoolData, useFailedRequestStore, UserCred } from '../AuthStore/useAuthStore'
+import useAuthStore, {
+  AuthStoreState,
+  IdentityPoolData,
+  useFailedRequestStore,
+  UserCred,
+} from '../AuthStore/useAuthStore'
 import { processQueue } from '../utils/queue'
 
 const nolookalikes = '346789ABCDEFGHJKLMNPQRTUVWXYabcdefghijkmnpqrtwxyz'
@@ -40,6 +46,7 @@ export interface AWSAttribute {
 interface InitCognitoExtraOptions {
   identityPoolID?: string
   CDN_BASE_URL?: string
+  zustandPersistOptions?: PersistOptions<AuthStoreState>
 }
 
 interface S3UploadOptions {
@@ -72,20 +79,24 @@ const useAuth = () => {
   const getUserCred = useAuthStore((store) => store.getUserCred)
   const clearStore = useAuthStore((store) => store.clearStore)
 
-  const initCognito = (poolData: ICognitoUserPoolData, extraOptions: InitCognitoExtraOptions) => {
+  const initCognito = (poolData: ICognitoUserPoolData, extraOptions?: InitCognitoExtraOptions) => {
     setUserPool(poolData)
     if (userCred) {
       return userCred.email
     }
 
-    if (extraOptions.identityPoolID) {
+    if (extraOptions?.identityPoolID) {
       const iPoolData: IdentityPoolData = {
         identityPoolID: extraOptions.identityPoolID,
         identityProvider: `cognito-idp.${AWSRegion}.amazonaws.com/${poolData.UserPoolId}`,
       }
-      if (extraOptions.CDN_BASE_URL) iPoolData['CDN_BASE_URL'] = extraOptions.CDN_BASE_URL
+      if (extraOptions?.CDN_BASE_URL) iPoolData['CDN_BASE_URL'] = extraOptions.CDN_BASE_URL
 
       setIPool(iPoolData)
+    }
+
+    if (extraOptions?.zustandPersistOptions) {
+      useAuthStore.persist.setOptions(extraOptions.zustandPersistOptions)
     }
 
     return
@@ -137,7 +148,7 @@ const useAuth = () => {
             }
 
             setUserCred(nUCred)
-            refreshIdentityPoolCreds()
+            refreshIdentityPoolCreds(nUCred.token)
 
             resolve({
               userCred: nUCred,
@@ -181,7 +192,7 @@ const useAuth = () => {
             }
 
             setUserCred(nUCred)
-            refreshIdentityPoolCreds()
+            refreshIdentityPoolCreds(nUCred.token)
             resolve(nUCred)
           },
 
@@ -235,7 +246,7 @@ const useAuth = () => {
                   },
                 })
                 setUserCred(nUCred)
-                refreshIdentityPoolCreds()
+                refreshIdentityPoolCreds(nUCred.token)
                 resolve(nUCred)
               })
             })
@@ -362,9 +373,6 @@ const useAuth = () => {
     return new Promise((resolve, reject) => {
       if (email) {
         if (uPool) {
-          console.log({ email, uPool })
-          console.log({ verificationCode, newPassword })
-
           const cognitoUser = new CognitoUser({
             Username: email,
             Pool: new CognitoUserPool(uPool),
@@ -486,31 +494,34 @@ const useAuth = () => {
     })
   }
 
-  const refreshIdentityPoolCreds = async (): Promise<void> => {
-    const token = useAuthStore.getState().userCred?.token
-    if (iPool && token) {
-      const identityClient = new CognitoIdentityClient({
-        region: AWSRegion,
-      })
-      const creds = FromCognitoIdentityPool({
-        client: identityClient,
-        identityPoolId: iPool.identityPoolID,
-        logins: {
-          [iPool.identityProvider]: token,
-        },
-      })
+  const refreshIdentityPoolCreds = async (token: string): Promise<void> => {
+    try {
+      if (iPool && token) {
+        const identityClient = new CognitoIdentityClient({
+          region: AWSRegion,
+        })
+        const creds = FromCognitoIdentityPool({
+          client: identityClient,
+          identityPoolId: iPool.identityPoolID,
+          logins: {
+            [iPool.identityProvider]: token,
+          },
+        })
 
-      const credentials = await creds()
-      setIPoolCreds(credentials)
+        const credentials = await creds()
+        setIPoolCreds(credentials)
+      }
+    } catch (error) {
+      console.log('Error while refreshing iPool creds: ', error)
     }
   }
 
   const uploadImageToS3 = async (base64string: string, options?: S3UploadOptions): Promise<string> => {
     options = { bucket: 'workduck-app-files', fileType: 'image/jpeg', giveCloudFrontURL: true, ...options }
-
+    const creds = useAuthStore.getState().iPoolCreds
     const s3Client = new S3Client({
       region: AWSRegion,
-      credentials: iPoolCreds,
+      credentials: creds,
     })
     const parsedImage = base64string.split(',')[1]
     const buffer = Buffer.from(parsedImage, 'base64')
