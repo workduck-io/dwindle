@@ -36,6 +36,11 @@ export interface AWSAttribute {
   Value: string
 }
 
+interface InitCognitoExtraOptions {
+  identityPoolID?: string
+  CDN_BASE_URL?: string
+}
+
 interface S3UploadOptions {
   bucket?: string
   fileType?: string
@@ -66,17 +71,18 @@ const useAuth = () => {
   const getUserCred = useAuthStore((store) => store.getUserCred)
   const clearStore = useAuthStore((store) => store.clearStore)
 
-  const initCognito = (poolData: ICognitoUserPoolData, identityPoolID?: string) => {
+  const initCognito = (poolData: ICognitoUserPoolData, extraOptions: InitCognitoExtraOptions) => {
     setUserPool(poolData)
     if (userCred) {
       return userCred.email
     }
 
-    if (identityPoolID) {
+    if (extraOptions.identityPoolID) {
       const iPoolData: IdentityPoolData = {
-        identityPoolID: identityPoolID,
+        identityPoolID: extraOptions.identityPoolID,
         identityProvider: `cognito-idp.${AWSRegion}.amazonaws.com/${poolData.UserPoolId}`,
       }
+      if (extraOptions.CDN_BASE_URL) iPoolData['CDN_BASE_URL'] = extraOptions.CDN_BASE_URL
 
       setIPool(iPoolData)
     }
@@ -498,8 +504,8 @@ const useAuth = () => {
     }
   }
 
-  const uploadImageToS3 = async (base64Buffer: string, options?: S3UploadOptions): Promise<any> => {
-    options = { bucket: 'upload-image-cognito-test', fileType: 'image/png', ...options }
+  const uploadImageToS3 = async (base64Buffer: string, options?: S3UploadOptions): Promise<string> => {
+    options = { bucket: 'workduck-app-files', fileType: 'image/png', giveCloudFrontURL: true, ...options }
 
     const s3Client = new S3Client({
       region: AWSRegion,
@@ -507,7 +513,7 @@ const useAuth = () => {
     })
 
     const filePath = `public/${randomFileName()}`
-    const res = await s3Client
+    await s3Client
       .send(
         new PutObjectCommand({
           Bucket: options.bucket,
@@ -518,10 +524,15 @@ const useAuth = () => {
         })
       )
       .catch((error) => {
-        return { error: error }
+        throw new Error(`Could not upload image to S3: ${error}`)
       })
 
-    console.log('Res: ', res)
+    const url =
+      options.giveCloudFrontURL && iPool?.CDN_BASE_URL
+        ? `${iPool.CDN_BASE_URL}/${filePath}`
+        : `https://${options.bucket}.s3.amazonaws.com/${filePath}`
+
+    return url
   }
 
   return {

@@ -18,6 +18,7 @@ export interface UserCred {
 export interface IdentityPoolData {
   identityPoolID: string
   identityProvider: string
+  CDN_BASE_URL?: string
 }
 
 export interface AuthStoreState {
