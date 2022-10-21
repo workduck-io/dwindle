@@ -1,9 +1,10 @@
+import { CognitoIdentityCredentials } from '@aws-sdk/credential-provider-cognito-identity'
 import {
   // CognitoUser,
   ICognitoUserPoolData,
 } from 'amazon-cognito-identity-js'
-import create from 'zustand'
-import { persist } from 'zustand/middleware'
+import create, { GetState, SetState } from 'zustand'
+import { persist, StoreApiWithPersist } from 'zustand/middleware'
 
 export interface UserCred {
   email: string
@@ -14,10 +15,19 @@ export interface UserCred {
   username: string
 }
 
+export interface IdentityPoolData {
+  identityPoolID: string
+  identityProvider: string
+  CDN_BASE_URL?: string
+}
+
 export interface AuthStoreState {
   userPool: ICognitoUserPoolData | undefined
+  iPool: IdentityPoolData | undefined
+  iPoolCreds: CognitoIdentityCredentials | undefined
   setUserPool: (userPool: ICognitoUserPoolData) => void
-
+  setIPool: (iPoolData: IdentityPoolData) => void
+  setIPoolCreds: (iPoolCreds: CognitoIdentityCredentials) => void
   email: string | undefined
 
   // Removed `user` state because of all stores being copied inside of it
@@ -41,16 +51,24 @@ export interface FailedRequestState {
   setIsRefreshing: (isRefreshing: boolean) => void
 }
 
-const useAuthStore = create<AuthStoreState>(
+const useAuthStore = create<
+  AuthStoreState,
+  SetState<AuthStoreState>,
+  GetState<AuthStoreState>,
+  StoreApiWithPersist<AuthStoreState>
+>(
   persist(
     (set, get) => ({
       userPool: undefined,
+      iPool: undefined,
+      iPoolCreds: undefined,
       // user: undefined,
       userCred: undefined,
 
       email: undefined,
 
       setUserPool: (userPool) => set({ userPool }),
+      setIPool: (iPool) => set({ iPool }),
       // setUser: (user) => set({ user }),
       setEmail: (email) => set({ email }),
       getUserCred: () => {
@@ -60,7 +78,9 @@ const useAuthStore = create<AuthStoreState>(
       setUserCred: (userCred) => {
         set({ userCred })
       },
-
+      setIPoolCreds: (iPoolCreds) => {
+        set({ iPoolCreds })
+      },
       clearStore: () =>
         set({
           // user: undefined,

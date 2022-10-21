@@ -101,3 +101,5 @@ src/main.prod.js
 
 /example/node_modules
 /example/build
+
+/example/.env
