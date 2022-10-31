@@ -16,44 +16,18 @@ import {
 import axios, { AxiosRequestConfig } from 'axios'
 import { Buffer } from 'buffer/'
 import jwtDecode from 'jwt-decode'
-import { customAlphabet } from 'nanoid'
 import qs from 'qs'
-import { PersistOptions } from 'zustand/middleware'
 
-import useAuthStore, {
-  AuthStoreState,
-  IdentityPoolData,
-  useFailedRequestStore,
-  UserCred,
-} from '../AuthStore/useAuthStore'
+import useAuthStore, { IdentityPoolData, useFailedRequestStore, UserCred } from '../AuthStore/useAuthStore'
+import {
+  AWSAttribute,
+  AWSRegion,
+  InitCognitoExtraOptions,
+  randomFileName,
+  S3UploadOptions,
+  WorkspaceIDsAttrName,
+} from '../utils/helpers'
 import { processQueue } from '../utils/queue'
-
-const nolookalikes = '346789ABCDEFGHJKLMNPQRTUVWXYabcdefghijkmnpqrtwxyz'
-const nanoid = customAlphabet(nolookalikes, 20)
-
-const randomFileName = () => {
-  const s = nanoid()
-  return s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8, 12) + '-' + s.slice(12)
-}
-
-const AWSRegion = 'us-east-1'
-const WorkspaceIDsAttrName = 'custom:mex_workspace_ids'
-export interface AWSAttribute {
-  Name: string
-  Value: string
-}
-
-interface InitCognitoExtraOptions {
-  identityPoolID?: string
-  CDN_BASE_URL?: string
-  zustandPersistOptions?: PersistOptions<AuthStoreState>
-}
-
-interface S3UploadOptions {
-  bucket?: string
-  fileType?: string
-  giveCloudFrontURL?: boolean
-}
 
 export function wrapErr<T>(f: (result: T) => void) {
   return (err: any, result: T) => {
@@ -65,8 +39,6 @@ export function wrapErr<T>(f: (result: T) => void) {
 
 const useAuth = () => {
   const uPool = useAuthStore((store) => store.userPool)
-  const iPool = useAuthStore((store) => store.iPool)
-  const iPoolCreds = useAuthStore((store) => store.iPoolCreds)
   const email = useAuthStore((store) => store.email)
   const setUserPool = useAuthStore((store) => store.setUserPool)
   const setIPool = useAuthStore((store) => store.setIPool)
@@ -91,7 +63,6 @@ const useAuth = () => {
         identityProvider: `cognito-idp.${AWSRegion}.amazonaws.com/${poolData.UserPoolId}`,
       }
       if (extraOptions?.CDN_BASE_URL) iPoolData['CDN_BASE_URL'] = extraOptions.CDN_BASE_URL
-
       setIPool(iPoolData)
     }
 
@@ -496,6 +467,7 @@ const useAuth = () => {
 
   const refreshIdentityPoolCreds = async (token: string): Promise<void> => {
     try {
+      const iPool = useAuthStore.getState().iPool
       if (iPool && token) {
         const identityClient = new CognitoIdentityClient({
           region: AWSRegion,
@@ -512,18 +484,22 @@ const useAuth = () => {
         setIPoolCreds(credentials)
       }
     } catch (error) {
-      console.log('Error while refreshing iPool creds: ', error)
+      console.error('Error while refreshing iPool creds: ', error)
     }
   }
 
   const uploadImageToS3 = async (base64string: string, options?: S3UploadOptions): Promise<string> => {
     options = { bucket: 'workduck-app-files', fileType: 'image/jpeg', giveCloudFrontURL: true, ...options }
+
+    const iPool = useAuthStore.getState().iPool
+
     const creds = useAuthStore.getState().iPoolCreds
     const s3Client = new S3Client({
       region: AWSRegion,
       credentials: creds,
     })
-    const parsedImage = base64string.split(',')[1]
+
+    const parsedImage = options.parseBase64String ? base64string.split(',')[1] : base64string
     const buffer = Buffer.from(parsedImage, 'base64')
 
     const filePath = `public/${randomFileName()}`

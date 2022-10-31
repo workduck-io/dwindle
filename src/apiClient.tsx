@@ -2,8 +2,7 @@ import { CognitoUserPool } from 'amazon-cognito-identity-js'
 import axios from 'axios'
 import { customAlphabet } from 'nanoid'
 
-import useAuthStore from './AuthStore/useAuthStore'
-import { useFailedRequestStore } from './AuthStore/useAuthStore'
+import useAuthStore, { useFailedRequestStore } from './AuthStore/useAuthStore'
 import { processQueue } from './utils/queue'
 
 const client = axios.create()
@@ -24,11 +23,10 @@ client.interceptors.request.use((request) => {
 
 const refreshToken = async () => {
   const { userCred, userPool: uPool } = useAuthStore.getState()
-  console.log('INTERCEPTOR', { userCred, uPool })
   if (userCred) {
     if (uPool) {
       const userPool = new CognitoUserPool(uPool)
-      const nuser = userPool.getCurrentUser()!
+      const nuser = userPool.getCurrentUser()
       if (!nuser) throw new Error('Session non existant')
       // All aws cognito user pool methods are async, so we need to use await
       return new Promise((resolve, reject) => {
@@ -80,7 +78,7 @@ client.interceptors.response.use(undefined, async (error) => {
           })
           return client(error.config)
         } catch (error) {
-          console.log('REFRESH TOKEN ERROR', error)
+          console.error('REFRESH TOKEN ERROR', error)
         }
       }
 
