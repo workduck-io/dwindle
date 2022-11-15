@@ -1,6 +1,9 @@
 import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
-import { fromCognitoIdentityPool as FromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity'
+import {
+  CognitoIdentityCredentials,
+  fromCognitoIdentityPool as FromCognitoIdentityPool,
+} from '@aws-sdk/credential-provider-cognito-identity'
 import {
   AuthenticationDetails,
   ClientMetadata,
@@ -465,7 +468,7 @@ const useAuth = () => {
     })
   }
 
-  const refreshIdentityPoolCreds = async (token: string): Promise<void> => {
+  const refreshIdentityPoolCreds = async (token: string): Promise<CognitoIdentityCredentials | undefined> => {
     try {
       const iPool = useAuthStore.getState().iPool
       if (iPool && token) {
@@ -482,9 +485,13 @@ const useAuth = () => {
 
         const credentials = await creds()
         setIPoolCreds(credentials)
+        return credentials
+      } else {
+        throw new Error('Token or iPool Not Found')
       }
     } catch (error) {
       console.error('Error while refreshing iPool creds: ', error)
+      return undefined
     }
   }
 
@@ -493,7 +500,14 @@ const useAuth = () => {
 
     const iPool = useAuthStore.getState().iPool
 
-    const creds = useAuthStore.getState().iPoolCreds
+    let creds = useAuthStore.getState().iPoolCreds
+    if (!creds) throw new Error('Identity Pool Credentials Not Found; Could not upload')
+
+    const t = Date.now()
+    if (creds.expiration && creds.expiration?.getTime() <= t) {
+      creds = await refreshIdentityPoolCreds(useAuthStore.getState().userCred?.token as string)
+    }
+
     const s3Client = new S3Client({
       region: AWSRegion,
       credentials: creds,

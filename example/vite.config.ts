@@ -8,7 +8,7 @@ export default defineConfig({
     include: ['react/jsx-runtime'],
   },
   server: {
-    port: 3333,
+    port: 3000,
   },
   build: {
     minify: false,
