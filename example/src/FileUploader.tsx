@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 
 import { useForm, useFieldArray } from 'react-hook-form'
 
-import { S3UploadClient, useAuth } from '@workduck-io/dwindle'
+import { S3UploadClient } from '@workduck-io/dwindle'
 
 interface ImageUploadFormDetails {
   image: FileList
