@@ -511,6 +511,7 @@ const useAuth = () => {
     const s3Client = new S3Client({
       region: AWSRegion,
       credentials: creds,
+      useAccelerateEndpoint: true,
     })
 
     const parsedImage = options.parseBase64String ? base64string.split(',')[1] : base64string
