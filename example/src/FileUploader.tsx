@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 
 import { useForm, useFieldArray } from 'react-hook-form'
 
-import { useAuth } from '@workduck-io/dwindle'
+import { S3UploadClient } from '@workduck-io/dwindle'
 
 interface ImageUploadFormDetails {
   image: FileList
@@ -12,14 +12,12 @@ export const FileUploader = () => {
   const [imageURL, setImageURL] = useState<string>()
   const { register, handleSubmit } = useForm<ImageUploadFormDetails>()
 
-  const { uploadImageToS3 } = useAuth()
-
   const onSubmit = (data: ImageUploadFormDetails) => {
     const image = data.image[0]
     const fr = new FileReader()
     fr.onload = async (r) => {
       console.log('OnSubmit', { image, data, imageBase64: r.target.result })
-      const uploadedImagURL = await uploadImageToS3(r.target.result as string, {
+      const uploadedImagURL = await S3UploadClient(r.target.result as string, {
         fileType: image.type,
         giveCloudFrontURL: true,
       })
