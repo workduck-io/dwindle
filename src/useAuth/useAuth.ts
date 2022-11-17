@@ -504,8 +504,12 @@ const useAuth = () => {
     if (!creds) throw new Error('Identity Pool Credentials Not Found; Could not upload')
 
     const t = Date.now()
-    if (creds.expiration && creds.expiration?.getTime() <= t) {
-      creds = await refreshIdentityPoolCreds(useAuthStore.getState().userCred?.token as string)
+    if (creds.expiration) {
+      const expiryTime =
+        typeof creds.expiration === 'object' ? creds.expiration : Date.parse(creds.expiration as unknown as string)
+      if (expiryTime <= t) creds = await refreshIdentityPoolCreds(useAuthStore.getState().userCred?.token as string)
+    } else {
+      throw new Error('Identity Pool Credentials Not Found; Could not upload')
     }
 
     const s3Client = new S3Client({
