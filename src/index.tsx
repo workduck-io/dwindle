@@ -1,6 +1,7 @@
 import useAuthStore from './AuthStore/useAuthStore'
 import S3UploadClient from './S3UploadClient'
 import client from './apiClient'
+import kyClient from './kyClient'
 import useAuth from './useAuth/useAuth'
 
-export { client, useAuth, useAuthStore, S3UploadClient }
+export { client, useAuth, useAuthStore, S3UploadClient, kyClient }

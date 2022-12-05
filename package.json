@@ -11,6 +11,7 @@
     "url": "git+https://github.com/workduck-io/dwindle.git"
   },
   "scripts": {
+    "dev": "nodemon",
     "build": "yarn build:esm && yarn build:cjs",
     "build:esm": "tsc",
     "build:cjs": "tsc --module commonjs --outDir lib/cjs"
@@ -44,6 +45,7 @@
     "eslint-plugin-react": "^7.24.0",
     "eslint-plugin-react-hooks": "^4.2.0",
     "eslint-plugin-standard": "^5.0.0",
+    "nodemon": "^2.0.20",
     "prettier": "^2.7.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -68,6 +70,7 @@
     "cross-fetch": "^3.1.4",
     "jsonwebtoken": "^8.5.1",
     "jwt-decode": "^3.1.2",
+    "ky": "^0.32.2",
     "nanoid": "^4.0.0",
     "process": "^0.11.10",
     "qs": "^6.10.3"

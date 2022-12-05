@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 
 import { useAuth, client } from '@workduck-io/dwindle'
 
+import { APIClient } from './APIClient'
 import { Login, Register, CustomAttributes } from './Auth'
 import { FileUploader } from './FileUploader'
 
@@ -75,6 +76,7 @@ function App() {
         <button onClick={sendRequest}>Send requests</button>
         <button onClick={logout}>Logout!</button>
         <FileUploader />
+        <APIClient />
       </header>
     </div>
   )
