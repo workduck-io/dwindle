@@ -55,6 +55,7 @@ class KYClient {
       ...config,
       json: data,
     })
+    if (item.status === 204) return
     return await getData<T>(item)
   }
 
@@ -63,11 +64,13 @@ class KYClient {
       ...config,
       json: data,
     })
+    if (item.status === 204) return
     return await getData<T>(item)
   }
 
   async delete<T = any>(url: string, config?) {
     const item = await this._client.delete(url, config)
+    if (item.status === 204) return
     return await getData<T>(item)
   }
 
@@ -76,6 +79,7 @@ class KYClient {
       ...config,
       json: data,
     })
+    if (item.status === 204) return
     return await getData<T>(item)
   }
 
