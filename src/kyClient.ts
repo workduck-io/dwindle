@@ -7,7 +7,7 @@ import { fastHash } from './utils/fastHash'
 import { generateRequestID } from './utils/helpers'
 import refreshToken from './utils/refreshToken'
 
-const getData = async (item: KyResponse) => await item.json<any>()
+const getData = async <T>(item: KyResponse) => await item.json<T>()
 
 class KYClient {
   private _client: KyInstance
@@ -26,7 +26,6 @@ class KYClient {
         retry: 0,
       })
     }
-
     this._urlHash = {}
   }
 
@@ -34,7 +33,7 @@ class KYClient {
     this._workspaceID = workspaceID
   }
 
-  async get(url: string, config) {
+  async get<T = any>(url: string, config) {
     const key = `HASH_${fastHash(url)}`
     if (
       config?.cache &&
@@ -47,37 +46,37 @@ class KYClient {
       if (config?.cache) {
         this._urlHash[key] = Date.now()
       }
-      return await getData(item)
+      return await getData<T>(item)
     }
   }
 
-  async post(url: string, data, config?) {
+  async post<T = any>(url: string, data, config?) {
     const item = await this._client.post(url, {
       ...config,
       json: data,
     })
-    return await getData(item)
+    return await getData<T>(item)
   }
 
-  async patch(url: string, data?, config?) {
+  async patch<T = any>(url: string, data?, config?) {
     const item = await this._client.patch(url, {
       ...config,
       json: data,
     })
-    return await getData(item)
+    return await getData<T>(item)
   }
 
-  async delete(url: string, config?) {
+  async delete<T = any>(url: string, config?) {
     const item = await this._client.delete(url, config)
-    return await getData(item)
+    return await getData<T>(item)
   }
 
-  async put(url: string, data, config?) {
+  async put<T = any>(url: string, data, config?) {
     const item = await this._client.put(url, {
       ...config,
       json: data,
     })
-    return await getData(item)
+    return await getData<T>(item)
   }
 
   private _attachTokenHook: BeforeRequestHook = (request) => {
