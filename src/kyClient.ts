@@ -1,93 +1,83 @@
-import { CognitoUserPool } from 'amazon-cognito-identity-js'
-import ky, { AfterResponseHook, BeforeRequestHook } from 'ky'
+import ky, { AfterResponseHook, BeforeRequestHook, KyResponse, type Options } from 'ky'
 import { type KyInstance } from 'ky/distribution/types/ky'
 
 import useAuthStore, { useFailedRequestStore } from './AuthStore/useAuthStore'
+import { DEFAULT_CACHE_EXPIRY, MEX_WORKSPACE_ID } from './utils/constants'
+import { fastHash } from './utils/fastHash'
 import { generateRequestID } from './utils/helpers'
-import { processQueue } from './utils/queue'
+import refreshToken from './utils/refreshToken'
 
-const refreshToken = async () => {
-  const { userCred, userPool: uPool } = useAuthStore.getState()
-  if (userCred) {
-    if (uPool) {
-      const userPool = new CognitoUserPool(uPool)
-      const nuser = userPool.getCurrentUser()
-      if (!nuser) throw new Error('Session non existant')
-      // All aws cognito user pool methods are async, so we need to use await
-      return new Promise((resolve, reject) => {
-        useFailedRequestStore.setState({
-          isRefreshing: false,
-        })
-        nuser.getSession((err: any, session: any) => {
-          if (err) reject(err)
-          const token = session.getIdToken().getJwtToken()
-          const payload = session.getIdToken().payload
-          const expiry = session.getIdToken().getExpiration()
-          useAuthStore.setState({
-            userCred: {
-              email: userCred.email,
-              username: userCred.username,
-              url: userCred.url,
-              token,
-              expiry,
-              userId: payload.sub,
-            },
-          })
-          useFailedRequestStore.setState({
-            isRefreshing: false,
-          })
-          processQueue(null, {
-            userCred: {
-              email: userCred.email,
-              username: userCred.username,
-              url: userCred.url,
-              token,
-              expiry,
-              userId: payload.sub,
-            },
-          })
-          resolve(session)
-        })
-      })
-    }
-  } else {
-    throw new Error('No userCred Found')
-  }
-}
-
-let KYClientInstance: KYClient
-
-interface KYClientOptions {
-  workspaceID: string
-}
+const getData = async (item: KyResponse) => await item.json<any>()
 
 class KYClient {
   private _client: KyInstance
-  private _options: KYClientOptions
+  private _workspaceID: string
+  private _urlHash: Record<string, number>
 
-  constructor() {
-    if (KYClientInstance) {
-      throw new Error('New instance cannot be created!!')
+  constructor(kyOptions?: Options, kyClient?: KyInstance) {
+    if (kyClient) this._client = kyClient
+    else {
+      this._client = ky.create({
+        ...(kyOptions ?? {}),
+        hooks: {
+          beforeRequest: [this._attachTokenHook, this._attachWorkspaceIDHook],
+          afterResponse: [this._refreshTokenHook],
+        },
+        retry: 0,
+      })
     }
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    KYClientInstance = this
-  }
 
-  init(options: KYClientOptions) {
-    this._client = ky.create({
-      hooks: {
-        beforeRequest: [this._attachTokenHook, this._attachWorkspaceIDHook],
-        afterResponse: [this._refreshTokenHook],
-      },
-      retry: 0,
-    })
-
-    if (options) this._options = options
-    return this._client
+    this._urlHash = {}
   }
 
   setWorkspaceHeader(workspaceID: string) {
-    this._options.workspaceID = workspaceID
+    this._workspaceID = workspaceID
+  }
+
+  async get(url: string, config) {
+    const key = `HASH_${fastHash(url)}`
+    if (
+      config?.cache &&
+      key in this._urlHash &&
+      Date.now() - this._urlHash[key] < (config.cache.expiry ?? DEFAULT_CACHE_EXPIRY)
+    ) {
+      return
+    } else {
+      const item = await this._client.get(url, config)
+      if (config?.cache) {
+        this._urlHash[key] = Date.now()
+      }
+      return await getData(item)
+    }
+  }
+
+  async post(url: string, data, config?) {
+    const item = await this._client.post(url, {
+      ...config,
+      json: data,
+    })
+    return await getData(item)
+  }
+
+  async patch(url: string, data?, config?) {
+    const item = await this._client.patch(url, {
+      ...config,
+      json: data,
+    })
+    return await getData(item)
+  }
+
+  async delete(url: string, config?) {
+    const item = await this._client.delete(url, config)
+    return await getData(item)
+  }
+
+  async put(url: string, data, config?) {
+    const item = await this._client.put(url, {
+      ...config,
+      json: data,
+    })
+    return await getData(item)
   }
 
   private _attachTokenHook: BeforeRequestHook = (request) => {
@@ -99,8 +89,7 @@ class KYClient {
   }
 
   private _attachWorkspaceIDHook: BeforeRequestHook = (request) => {
-    if (request && request.headers && KYClientInstance._options.workspaceID)
-      request.headers.set('mex-workspace-id', this._options.workspaceID)
+    if (request && request.headers && this._workspaceID) request.headers.set(MEX_WORKSPACE_ID, this._workspaceID)
   }
 
   private _refreshTokenHook: AfterResponseHook = async (request, _, response) => {
