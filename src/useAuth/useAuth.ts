@@ -16,9 +16,9 @@ import {
   CognitoUserSession, //CognitoUser,
   ICognitoUserPoolData,
 } from 'amazon-cognito-identity-js'
-import axios, { AxiosRequestConfig } from 'axios'
 import { Buffer } from 'buffer/'
 import jwtDecode from 'jwt-decode'
+import ky from 'ky'
 import qs from 'qs'
 
 import useAuthStore, { IdentityPoolData, useFailedRequestStore, UserCred } from '../AuthStore/useAuthStore'
@@ -85,19 +85,17 @@ const useAuth = () => {
           redirect_uri: redirectURI,
           code,
         })
-        const config: AxiosRequestConfig<any> = {
-          method: 'post',
-          url: 'https://workduck.auth.us-east-1.amazoncognito.com/oauth2/token',
+
+        ky.post('https://workduck.auth.us-east-1.amazoncognito.com/oauth2/token', {
+          json: dataPayload,
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             Cookie: 'XSRF-TOKEN=c393745c-a0fa-4858-9777-897c3aff4fbc',
           },
-          data: dataPayload,
-        }
-
-        axios(config)
-          .then(function (response) {
-            const tripletTokens: any = response.data
+        })
+          .then((d) => d.json())
+          .then((res) => {
+            const tripletTokens: any = res
             const decodedIdToken: any = jwtDecode(tripletTokens?.id_token)
 
             const nUCred = {
@@ -129,9 +127,7 @@ const useAuth = () => {
               tokens: tripletTokens,
             })
           })
-          .catch(function (error) {
-            reject(error.message || JSON.stringify(error))
-          })
+          .catch((error) => reject(error.message || JSON.stringify(error)))
       } catch (error) {
         reject(error.message || JSON.stringify(error))
       }
@@ -185,10 +181,10 @@ const useAuth = () => {
       if (userCred) {
         if (uPool) {
           const userPool = new CognitoUserPool(uPool)
-          const nuser = userPool.getCurrentUser()!
+          const nuser = userPool.getCurrentUser()
           if (!nuser) reject('User session does not exist')
 
-          nuser.getSession(async (err: any, session: any) => {
+          nuser?.getSession(async (err: any, session: any) => {
             if (err) reject(err)
             const refreshToken_ = session.getRefreshToken()
             await new Promise((resolve, reject) => {

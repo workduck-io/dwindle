@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@workduck-io/dwindle": "file:../lib/esm",
-    "axios": "^0.23.0",
+    "ky": "^0.32.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.23.0"

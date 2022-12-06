@@ -1,0 +1,8 @@
+{
+  "env": {
+    "__DEV__": "true"
+  },
+  "watch": ["src"],
+  "ext": "tsx,ts",
+  "exec": "yarn build"
+}

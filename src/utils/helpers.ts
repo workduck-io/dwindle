@@ -4,11 +4,15 @@ import { PersistOptions } from 'zustand/middleware'
 import { AuthStoreState } from '../AuthStore/useAuthStore'
 
 const nolookalikes = '346789ABCDEFGHJKLMNPQRTUVWXYabcdefghijkmnpqrtwxyz'
-export const nanoid = customAlphabet(nolookalikes, 20)
+export const nanoid = customAlphabet(nolookalikes)
 
 export const randomFileName = () => {
-  const s = nanoid()
+  const s = nanoid(20)
   return s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8, 12) + '-' + s.slice(12)
+}
+
+export const generateRequestID = () => {
+  return `REQUEST_${nanoid(21)}`
 }
 
 export const AWSRegion = 'us-east-1'
