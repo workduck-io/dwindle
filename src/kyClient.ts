@@ -9,6 +9,11 @@ import refreshToken from './utils/refreshToken'
 
 const getData = async <T>(item: KyResponse) => await item.json<T>()
 
+export interface CacheConfig {
+  enabled: boolean
+  expiry: number
+}
+
 class KYClient {
   private _client: KyInstance
   private _workspaceID: string
@@ -20,7 +25,7 @@ class KYClient {
       this._client = ky.create({
         ...(kyOptions ?? {}),
         hooks: {
-          beforeRequest: [this._attachTokenHook, this._attachWorkspaceIDHook],
+          beforeRequest: [this._attachTokenAndRequestIDHook, this._attachWorkspaceIDHook],
           afterResponse: [this._refreshTokenHook],
         },
         retry: 0,
@@ -33,57 +38,60 @@ class KYClient {
     this._workspaceID = workspaceID
   }
 
-  async get<T = any>(url: string, config) {
+  async get<T = any>(url: string, cacheConfig?: CacheConfig, options?: Options) {
     const key = `HASH_${fastHash(url)}`
     if (
-      config?.cache &&
+      cacheConfig?.enabled &&
       key in this._urlHash &&
-      Date.now() - this._urlHash[key] < (config.cache.expiry ?? DEFAULT_CACHE_EXPIRY)
+      Date.now() - this._urlHash[key] < (cacheConfig.expiry ?? DEFAULT_CACHE_EXPIRY)
     ) {
       return
     } else {
-      const item = await this._client.get(url, config)
-      if (config?.cache) {
+      const item = await this._client.get(url, options)
+      if (cacheConfig?.enabled) {
         this._urlHash[key] = Date.now()
       }
       return await getData<T>(item)
     }
   }
 
-  async post<T = any>(url: string, data, config?) {
+  async post<T = any>(url: string, data?: any, options?: Options) {
     const item = await this._client.post(url, {
-      ...config,
+      ...options,
       json: data,
     })
     if (item.status === 204) return
     return await getData<T>(item)
   }
 
-  async patch<T = any>(url: string, data?, config?) {
+  async patch<T = any>(url: string, data?: any, options?: Options) {
     const item = await this._client.patch(url, {
-      ...config,
+      ...options,
       json: data,
     })
     if (item.status === 204) return
     return await getData<T>(item)
   }
 
-  async delete<T = any>(url: string, config?) {
-    const item = await this._client.delete(url, config)
+  async delete<T = any>(url: string, data?: any, options?: Options) {
+    const item = await this._client.delete(url, {
+      ...options,
+      json: data,
+    })
     if (item.status === 204) return
     return await getData<T>(item)
   }
 
-  async put<T = any>(url: string, data, config?) {
+  async put<T = any>(url: string, data?: any, options?: Options) {
     const item = await this._client.put(url, {
-      ...config,
+      ...options,
       json: data,
     })
     if (item.status === 204) return
     return await getData<T>(item)
   }
 
-  private _attachTokenHook: BeforeRequestHook = (request) => {
+  private _attachTokenAndRequestIDHook: BeforeRequestHook = (request) => {
     const userCred = useAuthStore.getState().userCred
     if (request && request.headers && userCred && userCred.token) {
       request.headers.set('Authorization', `Bearer ${userCred.token}`)
