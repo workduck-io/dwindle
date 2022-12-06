@@ -46,6 +46,7 @@
     "eslint-plugin-react-hooks": "^4.2.0",
     "eslint-plugin-standard": "^5.0.0",
     "nodemon": "^2.0.20",
+    "ky": "^0.32.2",
     "prettier": "^2.7.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -53,6 +54,7 @@
     "zustand": "^3.5.13"
   },
   "peerDependencies": {
+    "ky": "^0.32.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "zustand": "^3.5.13"
@@ -70,7 +72,6 @@
     "cross-fetch": "^3.1.4",
     "jsonwebtoken": "^8.5.1",
     "jwt-decode": "^3.1.2",
-    "ky": "^0.32.2",
     "nanoid": "^4.0.0",
     "process": "^0.11.10",
     "qs": "^6.10.3"
