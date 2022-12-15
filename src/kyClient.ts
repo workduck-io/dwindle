@@ -105,11 +105,6 @@ class KYClient {
 
   private _refreshTokenHook: AfterResponseHook = async (request, _, response) => {
     if (response && response.status === 401) {
-      console.log('Inside refresh token hook', {
-        isRefreshing: useFailedRequestStore.getState().isRefreshing,
-        failedRequests: useFailedRequestStore.getState().failedRequests,
-      })
-
       if (useFailedRequestStore.getState().isRefreshing) {
         try {
           useFailedRequestStore.getState().addFailedRequest(request)
