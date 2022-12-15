@@ -107,10 +107,8 @@ class KYClient {
     if (response && response.status === 401) {
       if (useFailedRequestStore.getState().isRefreshing) {
         try {
-          await new Promise((resolve, reject) => {
-            useFailedRequestStore.getState().addFailedRequest({ resolve, reject })
-          })
-          return this._client(request)
+          useFailedRequestStore.getState().addFailedRequest(request)
+          return response
         } catch (error) {
           throw new Error(error)
         }
@@ -118,6 +116,8 @@ class KYClient {
       try {
         useFailedRequestStore.getState().setIsRefreshing(true)
         await refreshToken()
+        useFailedRequestStore.getState().setIsRefreshing(false)
+        useFailedRequestStore.getState().retryFailedRequests(this._client)
         return this._client(request)
       } catch (error) {
         throw new Error(error)
