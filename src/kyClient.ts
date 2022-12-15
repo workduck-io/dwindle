@@ -105,12 +105,15 @@ class KYClient {
 
   private _refreshTokenHook: AfterResponseHook = async (request, _, response) => {
     if (response && response.status === 401) {
+      console.log('Inside refresh token hook', {
+        isRefreshing: useFailedRequestStore.getState().isRefreshing,
+        failedRequests: useFailedRequestStore.getState().failedRequests,
+      })
+
       if (useFailedRequestStore.getState().isRefreshing) {
         try {
-          await new Promise((resolve, reject) => {
-            useFailedRequestStore.getState().addFailedRequest({ resolve, reject })
-          })
-          return this._client(request)
+          useFailedRequestStore.getState().addFailedRequest(request)
+          return response
         } catch (error) {
           throw new Error(error)
         }
@@ -118,6 +121,8 @@ class KYClient {
       try {
         useFailedRequestStore.getState().setIsRefreshing(true)
         await refreshToken()
+        useFailedRequestStore.getState().setIsRefreshing(false)
+        useFailedRequestStore.getState().retryFailedRequests(this._client)
         return this._client(request)
       } catch (error) {
         throw new Error(error)

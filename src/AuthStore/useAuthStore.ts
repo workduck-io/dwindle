@@ -3,6 +3,7 @@ import {
   // CognitoUser,
   ICognitoUserPoolData,
 } from 'amazon-cognito-identity-js'
+import { type KyInstance } from 'ky/distribution/types/ky'
 import create, { GetState, SetState } from 'zustand'
 import { persist, StoreApiWithPersist } from 'zustand/middleware'
 
@@ -47,6 +48,7 @@ export interface FailedRequestState {
   failedRequests: Array<any>
   setFailedRequests: (failedRequests: Array<any>) => void
   addFailedRequest: (failedRequest: any) => void
+  retryFailedRequests: (client: KyInstance) => void
   isRefreshing: boolean
   setIsRefreshing: (isRefreshing: boolean) => void
 }
@@ -92,16 +94,24 @@ const useAuthStore = create<
   )
 )
 
-export const useFailedRequestStore = create<FailedRequestState>((set) => ({
+export const useFailedRequestStore = create<FailedRequestState>((set, get) => ({
   // failed requests handling
   failedRequests: [],
+  isRefreshing: false,
   setFailedRequests: (failedRequests: Array<any>) => set({ failedRequests }),
   addFailedRequest: (failedRequest: any) =>
     set((state) => ({
       failedRequests: [...state.failedRequests, failedRequest],
     })),
-  isRefreshing: false,
   setIsRefreshing: (isRefreshing: boolean) => set({ isRefreshing }),
+  retryFailedRequests: (client: KyInstance) => {
+    get().failedRequests.forEach((requestConfig) => {
+      client(requestConfig)
+    })
+    set((state) => ({
+      failedRequests: [],
+    }))
+  },
 }))
 
 export default useAuthStore
