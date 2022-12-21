@@ -87,7 +87,7 @@ const useAuth = () => {
         })
 
         ky.post('https://workduck.auth.us-east-1.amazoncognito.com/oauth2/token', {
-          json: dataPayload,
+          body: dataPayload,
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             Cookie: 'XSRF-TOKEN=c393745c-a0fa-4858-9777-897c3aff4fbc',
