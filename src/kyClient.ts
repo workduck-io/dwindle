@@ -45,7 +45,7 @@ class KYClient {
       key in this._urlHash &&
       Date.now() - this._urlHash[key] < (cacheConfig.expiry ?? DEFAULT_CACHE_EXPIRY)
     ) {
-      return
+      return this._urlHash[key]
     } else {
       const item = await this._client.get(url, options)
       if (cacheConfig?.enabled) {
