@@ -14,6 +14,7 @@ export interface UserCred {
   expiry: number
   url: string
   username: string
+  refresh_token: string
 }
 
 export interface IdentityPoolData {

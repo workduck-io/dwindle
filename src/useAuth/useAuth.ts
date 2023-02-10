@@ -105,6 +105,7 @@ const useAuth = () => {
               token: tripletTokens?.id_token,
               username: decodedIdToken['cognito:username'],
               url: decodedIdToken.iss,
+              refresh_token: tripletTokens.refresh_token,
             }
 
             if (uPool) {
@@ -159,6 +160,7 @@ const useAuth = () => {
               expiry,
               token: idToken,
               url: `cognito-idp.${AWSRegion}.amazonaws.com/${userPool.getUserPoolId()}`,
+              refresh_token: result.getRefreshToken().getToken(),
             }
 
             setUserCred(nUCred)
@@ -188,7 +190,7 @@ const useAuth = () => {
             if (err) reject(err)
             const refreshToken_ = session.getRefreshToken()
             await new Promise((resolve, reject) => {
-              nuser.refreshSession(refreshToken_, (err: any, session: any) => {
+              nuser.refreshSession(refreshToken_, (err: any, session: CognitoUserSession) => {
                 if (err) reject(err)
                 const token = session.getIdToken().getJwtToken()
                 const payload = session.getIdToken().payload
@@ -201,6 +203,7 @@ const useAuth = () => {
                   token,
                   expiry,
                   userId: payload.sub,
+                  refresh_token: session.getRefreshToken().getToken(),
                 }
                 useFailedRequestStore.setState({
                   isRefreshing: false,
