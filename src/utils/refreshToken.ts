@@ -1,4 +1,4 @@
-import { CognitoUserPool } from 'amazon-cognito-identity-js'
+import { CognitoUserPool, CognitoUserSession } from 'amazon-cognito-identity-js'
 
 import useAuthStore, { useFailedRequestStore } from '../AuthStore/useAuthStore'
 import { processQueue } from './queue'
@@ -15,7 +15,7 @@ const refreshToken = async () => {
         useFailedRequestStore.setState({
           isRefreshing: false,
         })
-        nuser.getSession((err: any, session: any) => {
+        nuser.getSession((err: any, session: CognitoUserSession) => {
           if (err) reject(err)
           const token = session.getIdToken().getJwtToken()
           const payload = session.getIdToken().payload
@@ -28,6 +28,7 @@ const refreshToken = async () => {
               token,
               expiry,
               userId: payload.sub,
+              refresh_token: session.getRefreshToken().getToken(),
             },
           })
           useFailedRequestStore.setState({
