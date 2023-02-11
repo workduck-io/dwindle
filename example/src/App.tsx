@@ -1,7 +1,7 @@
 // @ts-ignore
 import React, { useEffect, useState } from 'react'
 
-import { useAuth, client } from '@workduck-io/dwindle'
+import { useAuth } from '@workduck-io/dwindle'
 
 import { APIClient } from './APIClient'
 import { Login, Register, CustomAttributes } from './Auth'
@@ -10,8 +10,6 @@ import { FileUploader } from './FileUploader'
 const cognitoPoolID = import.meta.env.VITE_APP_COGNITO_POOL_ID
 const cognitoClientID = import.meta.env.VITE_APP_COGNITO_CLIENT_ID
 const identityPoolID = import.meta.env.VITE_APP_COGNITO_IDENTITY_POOL_ID
-const identityProvider = import.meta.env.VITE_APP_COGNITO_IDENTITY_PROVIDER
-const region = 'us-east-1'
 
 function App() {
   const { refreshToken, userCred, initCognito, signOut } = useAuth()
@@ -21,10 +19,7 @@ function App() {
   useEffect(() => {
     // Make sure to initialize the lib rary with the respective keys
     // before calling functions to client or authentication
-    initCognito(
-      { UserPoolId: cognitoPoolID, ClientId: cognitoClientID },
-      { identityPoolID: identityPoolID, CDN_BASE_URL: 'https://cdn.workduck.io' }
-    )
+    initCognito({ UserPoolId: cognitoPoolID, ClientId: cognitoClientID })
     console.log('Cognito Initialized', { cognitoClientID, cognitoPoolID, identityPoolID })
   }, []) // eslint-disable-line
 
@@ -41,13 +36,13 @@ function App() {
     setUserDetails(JSON.stringify(userCred))
   }
 
-  const sendRequest = (e: any) => {
-    e.preventDefault()
-    client
-      .get('https://your.aws.api/route')
-      .then((d) => console.log(d))
-      .catch((e) => console.log(e))
-  }
+  // const sendRequest = (e: any) => {
+  //   e.preventDefault()
+  //   client
+  //     .get('https://your.aws.api/route')
+  //     .then((d) => console.log(d))
+  //     .catch((e) => console.log(e))
+  // }
 
   const logout = async (e: any) => {
     e.preventDefault()
@@ -73,10 +68,10 @@ function App() {
         <p>{userDetails}</p>
         <h4>Add Custom Attributes</h4>
         <CustomAttributes />
-        <button onClick={sendRequest}>Send requests</button>
+        {/* <button onClick={sendRequest}>Send requests</button> */}
         <button onClick={logout}>Logout!</button>
         <FileUploader />
-        <APIClient />
+        {/* <APIClient /> */}
       </header>
     </div>
   )
