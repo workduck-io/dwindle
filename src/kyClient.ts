@@ -16,7 +16,7 @@ export interface CacheConfig {
 
 class KYClient {
   private _client: KyInstance
-  private _workspaceID: string
+  private _workspaceID: string | undefined
   private _urlHash: Record<string, number>
 
   constructor(kyOptions?: Options, kyClient?: KyInstance) {
@@ -36,6 +36,13 @@ class KYClient {
 
   setWorkspaceHeader(workspaceID: string) {
     this._workspaceID = workspaceID
+  }
+
+  async reset() {
+    this._urlHash = {}
+    this._workspaceID = undefined
+    useFailedRequestStore.getState().clearStore()
+    useAuthStore.getState().clearStore()
   }
 
   async get<T = any>(url: string, cacheConfig?: CacheConfig, options?: Options) {
