@@ -52,6 +52,7 @@ export interface FailedRequestState {
   retryFailedRequests: (client: KyInstance) => void
   isRefreshing: boolean
   setIsRefreshing: (isRefreshing: boolean) => void
+  clearStore: () => void
 }
 
 const useAuthStore = create<
@@ -112,6 +113,9 @@ export const useFailedRequestStore = create<FailedRequestState>((set, get) => ({
     set((state) => ({
       failedRequests: [],
     }))
+  },
+  clearStore: () => {
+    set({ failedRequests: [], isRefreshing: false })
   },
 }))
 
