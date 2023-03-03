@@ -389,6 +389,8 @@ const useAuth = () => {
             clearStore()
             resolve('Signout Successful')
           })
+        } else {
+          resolve('Signout Successful!')
         }
       } catch {
         reject('Signout Failed')
