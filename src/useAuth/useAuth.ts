@@ -1,5 +1,5 @@
 import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity'
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { GetObjectCommand, GetObjectCommandOutput, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import {
   CognitoIdentityCredentials,
   fromCognitoIdentityPool as FromCognitoIdentityPool,
@@ -13,7 +13,7 @@ import {
   CognitoUser,
   CognitoUserAttribute,
   CognitoUserPool,
-  CognitoUserSession, //CognitoUser,
+  CognitoUserSession,
   ICognitoUserPoolData,
 } from 'amazon-cognito-identity-js'
 import { Buffer } from 'buffer/'
@@ -27,6 +27,7 @@ import {
   AWSRegion,
   InitCognitoExtraOptions,
   randomFileName,
+  S3DownloadOptions,
   S3UploadOptions,
   WorkspaceIDsAttrName,
 } from '../utils/helpers'
@@ -507,7 +508,9 @@ const useAuth = () => {
     const t = Date.now()
     if (creds.expiration) {
       const expiryTime =
-        typeof creds.expiration === 'object' ? creds.expiration : Date.parse(creds.expiration as unknown as string)
+        typeof creds.expiration === 'object'
+          ? creds.expiration.getTime()
+          : Date.parse(creds.expiration as unknown as string)
       if (expiryTime <= t) creds = await refreshIdentityPoolCreds(useAuthStore.getState().userCred?.token as string)
     } else {
       throw new Error('Identity Pool Credentials Not Found; Could not upload')
@@ -516,7 +519,6 @@ const useAuth = () => {
     const s3Client = new S3Client({
       region: AWSRegion,
       credentials: creds,
-      useAccelerateEndpoint: true,
     })
 
     const parsedImage = options.parseBase64String ? base64string.split(',')[1] : base64string
@@ -544,6 +546,93 @@ const useAuth = () => {
     return url
   }
 
+  const uploadFileToS3 = async (data: string, options?: S3UploadOptions): Promise<string> => {
+    options = { bucket: 'mex-app-files', fileType: 'text/plain', giveCloudFrontURL: false, ...options }
+
+    const iPool = useAuthStore.getState().iPool
+
+    let creds = useAuthStore.getState().iPoolCreds
+    if (!creds) throw new Error('Identity Pool Credentials Not Found; Could not upload')
+
+    const t = Date.now()
+    if (creds.expiration) {
+      const expiryTime =
+        typeof creds.expiration === 'object'
+          ? creds.expiration.getTime()
+          : Date.parse(creds.expiration as unknown as string)
+      if (expiryTime <= t) creds = await refreshIdentityPoolCreds(useAuthStore.getState().userCred?.token as string)
+    } else {
+      throw new Error('Identity Pool Credentials Not Found; Could not upload')
+    }
+
+    const s3Client = new S3Client({
+      region: AWSRegion,
+      credentials: creds,
+      useAccelerateEndpoint: true,
+    })
+
+    const buffer = Buffer.from(data, 'utf-8')
+
+    const filePath = `private/${useAuthStore.getState().userCred?.userId}/${options.fileName ?? randomFileName()}`
+    await s3Client
+      .send(
+        new PutObjectCommand({
+          Bucket: options.bucket,
+          Key: filePath,
+          Body: buffer,
+          ContentType: options.fileType,
+        })
+      )
+      .catch((error) => {
+        console.error(error)
+        throw new Error(`Could not upload file to S3: ${error}`)
+      })
+
+    const url =
+      options.giveCloudFrontURL && iPool?.CDN_BASE_URL
+        ? `${iPool.CDN_BASE_URL}/${filePath}`
+        : `https://${options.bucket}.s3.amazonaws.com/${filePath}`
+
+    return url
+  }
+
+  const downloadFileFromS3 = async (options: S3DownloadOptions): Promise<GetObjectCommandOutput['Body']> => {
+    options = { bucket: 'mex-app-files', ...options }
+    let creds = useAuthStore.getState().iPoolCreds
+    if (!creds) throw new Error('Identity Pool Credentials Not Found; Could not upload')
+
+    const t = Date.now()
+    if (creds.expiration) {
+      const expiryTime =
+        typeof creds.expiration === 'object'
+          ? creds.expiration.getTime()
+          : Date.parse(creds.expiration as unknown as string)
+      if (expiryTime <= t) creds = await refreshIdentityPoolCreds(useAuthStore.getState().userCred?.token as string)
+    } else {
+      throw new Error('Identity Pool Credentials Not Found; Could not upload')
+    }
+
+    const s3Client = new S3Client({
+      region: AWSRegion,
+      credentials: creds,
+    })
+
+    const filePath = `private/${useAuthStore.getState().userCred?.userId}/${options.fileName}`
+    const result = await s3Client
+      .send(
+        new GetObjectCommand({
+          Bucket: options.bucket,
+          Key: filePath,
+        })
+      )
+      .catch((error) => {
+        console.error(error)
+        throw new Error(`Could not upload file to S3: ${error}`)
+      })
+
+    return result.Body
+  }
+
   return {
     initCognito,
     signIn,
@@ -563,6 +652,8 @@ const useAuth = () => {
     userAddWorkspace,
     refreshIdentityPoolCreds,
     uploadImageToS3,
+    uploadFileToS3,
+    downloadFileFromS3,
   }
 }
 

@@ -23,6 +23,12 @@ export interface S3UploadOptions {
   fileType?: string
   giveCloudFrontURL?: boolean
   parseBase64String?: boolean
+  fileName?: string
+}
+
+export interface S3DownloadOptions {
+  bucket?: string
+  fileName: string
 }
 
 export interface AWSAttribute {
