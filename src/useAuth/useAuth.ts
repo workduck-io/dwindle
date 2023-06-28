@@ -615,6 +615,7 @@ const useAuth = () => {
     const s3Client = new S3Client({
       region: AWSRegion,
       credentials: creds,
+      useAccelerateEndpoint: true,
     })
 
     const filePath = `private/${useAuthStore.getState().userCred?.userId}/${options.fileName}`
