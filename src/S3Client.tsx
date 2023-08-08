@@ -1,12 +1,18 @@
 import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity'
-import { GetObjectCommand, GetObjectCommandOutput, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  GetObjectCommandOutput,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3'
 import {
   CognitoIdentityCredentials,
   fromCognitoIdentityPool as FromCognitoIdentityPool,
 } from '@aws-sdk/credential-provider-cognito-identity'
 
 import useAuthStore from './AuthStore/useAuthStore'
-import { AWSRegion, S3DownloadOptions, S3UploadOptions, randomFileName } from './utils/helpers'
+import { AWSRegion, S3DeleteOptions, S3DownloadOptions, S3UploadOptions, randomFileName } from './utils/helpers'
 
 const refreshIdentityPoolCreds = async (token: string): Promise<CognitoIdentityCredentials | undefined> => {
   try {
@@ -138,7 +144,7 @@ const S3FileUploadClient = async (base64string: string, options?: S3UploadOption
       })
     )
     .catch((error) => {
-      throw new Error(`Could not upload image to S3: ${error}`)
+      throw new Error(`Could not upload file to S3: ${error}`)
     })
 
   const iPool = useAuthStore.getState().iPool
@@ -149,6 +155,50 @@ const S3FileUploadClient = async (base64string: string, options?: S3UploadOption
       : `https://${options.bucket}.s3.amazonaws.com/${filePath}`
 
   return url
+}
+
+const S3FileDeleteClient = async (options?: S3DeleteOptions): Promise<boolean> => {
+  options = {
+    bucket: 'mex-app-files',
+    public: false,
+    ...options,
+  }
+
+  let creds = useAuthStore.getState().iPoolCreds
+  if (!creds) throw new Error('Identity Pool Credentials Not Found; Could not upload')
+
+  const t = Date.now()
+  if (creds.expiration) {
+    const expiryTime =
+      typeof creds.expiration === 'object'
+        ? creds.expiration.getTime()
+        : Date.parse(creds.expiration as unknown as string)
+    if (expiryTime <= t) creds = await refreshIdentityPoolCreds(useAuthStore.getState().userCred?.token as string)
+  } else {
+    throw new Error('Identity Pool Credentials Not Found; Could not upload')
+  }
+
+  const s3Client = new S3Client({
+    region: AWSRegion,
+    credentials: creds,
+  })
+
+  const filePath = options.public
+    ? `public/${options.fileName ?? randomFileName()}`
+    : `private/${useAuthStore.getState().userCred?.userId}/${options.fileName ?? randomFileName()}`
+
+  await s3Client
+    .send(
+      new DeleteObjectCommand({
+        Bucket: options.bucket,
+        Key: filePath,
+      })
+    )
+    .catch((error) => {
+      throw new Error(`Could not delete file from S3: ${error}`)
+    })
+
+  return true
 }
 
 const S3FileDownloadClient = async (options: S3DownloadOptions): Promise<GetObjectCommandOutput['Body']> => {
@@ -191,4 +241,4 @@ const S3FileDownloadClient = async (options: S3DownloadOptions): Promise<GetObje
   return result.Body
 }
 
-export { S3FileDownloadClient, S3FileUploadClient, S3UploadClient }
+export { S3FileDeleteClient, S3FileDownloadClient, S3FileUploadClient, S3UploadClient }

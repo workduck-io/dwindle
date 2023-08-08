@@ -1,5 +1,11 @@
 import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity'
-import { GetObjectCommand, GetObjectCommandOutput, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  GetObjectCommandOutput,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3'
 import {
   CognitoIdentityCredentials,
   fromCognitoIdentityPool as FromCognitoIdentityPool,
@@ -27,6 +33,7 @@ import {
   AWSRegion,
   InitCognitoExtraOptions,
   randomFileName,
+  S3DeleteOptions,
   S3DownloadOptions,
   S3UploadOptions,
   WorkspaceIDsAttrName,
@@ -617,6 +624,7 @@ const useAuth = () => {
     const s3Client = new S3Client({
       region: AWSRegion,
       credentials: creds,
+      useAccelerateEndpoint: true,
     })
 
     const filePath = options.public
@@ -635,6 +643,45 @@ const useAuth = () => {
       })
 
     return result.Body
+  }
+
+  const deleteFileFromS3 = async (options: S3DeleteOptions): Promise<boolean> => {
+    options = { bucket: 'mex-app-files', public: false, ...options }
+    let creds = useAuthStore.getState().iPoolCreds
+    if (!creds) throw new Error('Identity Pool Credentials Not Found; Could not upload')
+
+    const t = Date.now()
+    if (creds.expiration) {
+      const expiryTime =
+        typeof creds.expiration === 'object'
+          ? creds.expiration.getTime()
+          : Date.parse(creds.expiration as unknown as string)
+      if (expiryTime <= t) creds = await refreshIdentityPoolCreds(useAuthStore.getState().userCred?.token as string)
+    } else {
+      throw new Error('Identity Pool Credentials Not Found; Could not upload')
+    }
+
+    const s3Client = new S3Client({
+      region: AWSRegion,
+      credentials: creds,
+    })
+
+    const filePath = options.public
+      ? `public/${options.fileName ?? randomFileName()}`
+      : `private/${useAuthStore.getState().userCred?.userId}/${options.fileName ?? randomFileName()}`
+    await s3Client
+      .send(
+        new DeleteObjectCommand({
+          Bucket: options.bucket,
+          Key: filePath,
+        })
+      )
+      .catch((error) => {
+        console.error(error)
+        throw new Error(`Could not delete file from S3: ${error}`)
+      })
+
+    return true
   }
 
   return {
@@ -658,6 +705,7 @@ const useAuth = () => {
     uploadImageToS3,
     uploadFileToS3,
     downloadFileFromS3,
+    deleteFileFromS3,
   }
 }
 

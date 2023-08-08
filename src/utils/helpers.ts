@@ -27,6 +27,12 @@ export interface S3UploadOptions {
   public?: boolean
 }
 
+export interface S3DeleteOptions {
+  bucket?: string
+  fileName?: string
+  public?: boolean
+}
+
 export interface S3DownloadOptions {
   fileName: string
   bucket?: string
