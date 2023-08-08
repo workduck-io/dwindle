@@ -98,6 +98,7 @@ const S3FileUploadClient = async (base64string: string, options?: S3UploadOption
     fileType: 'plain/text',
     giveCloudFrontURL: false,
     parseBase64String: false,
+    public: false,
     ...options,
   }
 
@@ -123,7 +124,9 @@ const S3FileUploadClient = async (base64string: string, options?: S3UploadOption
 
   const parsedImage = options.parseBase64String ? base64string.split(',')[1] : base64string
 
-  const filePath = `private/${useAuthStore.getState().userCred?.userId}/${options.fileName ?? randomFileName()}`
+  const filePath = options.public
+    ? `public/${options.fileName ?? randomFileName()}`
+    : `private/${useAuthStore.getState().userCred?.userId}/${options.fileName ?? randomFileName()}`
 
   await s3Client
     .send(
@@ -149,7 +152,7 @@ const S3FileUploadClient = async (base64string: string, options?: S3UploadOption
 }
 
 const S3FileDownloadClient = async (options: S3DownloadOptions): Promise<GetObjectCommandOutput['Body']> => {
-  options = { bucket: 'mex-app-files', ...options }
+  options = { bucket: 'mex-app-files', public: false, ...options }
   let creds = useAuthStore.getState().iPoolCreds
   if (!creds) throw new Error('Identity Pool Credentials Not Found; Could not upload')
 
@@ -170,7 +173,9 @@ const S3FileDownloadClient = async (options: S3DownloadOptions): Promise<GetObje
     useAccelerateEndpoint: true,
   })
 
-  const filePath = `private/${useAuthStore.getState().userCred?.userId}/${options.fileName}`
+  const filePath = options.public
+    ? `public/${options.fileName ?? randomFileName()}`
+    : `private/${useAuthStore.getState().userCred?.userId}/${options.fileName ?? randomFileName()}`
   const result = await s3Client
     .send(
       new GetObjectCommand({
@@ -186,4 +191,4 @@ const S3FileDownloadClient = async (options: S3DownloadOptions): Promise<GetObje
   return result.Body
 }
 
-export { S3UploadClient, S3FileUploadClient, S3FileDownloadClient }
+export { S3FileDownloadClient, S3FileUploadClient, S3UploadClient }
