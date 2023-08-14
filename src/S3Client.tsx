@@ -204,19 +204,20 @@ const S3FileDeleteClient = async (options?: S3DeleteOptions): Promise<boolean> =
 const S3FileDownloadClient = async (options: S3DownloadOptions): Promise<GetObjectCommandOutput['Body']> => {
   options = { bucket: 'mex-app-files', public: false, ...options }
   let creds = useAuthStore.getState().iPoolCreds
-  if (!creds) throw new Error('Identity Pool Credentials Not Found; Could not upload')
+  if (!options.public) {
+    if (!creds) throw new Error('Identity Pool Credentials Not Found; Could not upload')
 
-  const t = Date.now()
-  if (creds.expiration) {
-    const expiryTime =
-      typeof creds.expiration === 'object'
-        ? creds.expiration.getTime()
-        : Date.parse(creds.expiration as unknown as string)
-    if (expiryTime <= t) creds = await refreshIdentityPoolCreds(useAuthStore.getState().userCred?.token as string)
-  } else {
-    throw new Error('Identity Pool Credentials Not Found; Could not upload')
+    const t = Date.now()
+    if (creds.expiration) {
+      const expiryTime =
+        typeof creds.expiration === 'object'
+          ? creds.expiration.getTime()
+          : Date.parse(creds.expiration as unknown as string)
+      if (expiryTime <= t) creds = await refreshIdentityPoolCreds(useAuthStore.getState().userCred?.token as string)
+    } else {
+      throw new Error('Identity Pool Credentials Not Found; Could not upload')
+    }
   }
-
   const s3Client = new S3Client({
     region: AWSRegion,
     credentials: creds,
