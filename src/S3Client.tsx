@@ -196,8 +196,8 @@ const S3FileDeleteClient = async (options?: S3DeleteOptions): Promise<boolean> =
 }
 
 const S3FileDownloadClient = async (
-  publicUrlEndpoint: string,
-  options: S3DownloadOptions
+  options: S3DownloadOptions,
+  publicUrlEndpoint?: string
 ): Promise<string | undefined> => {
   options = { bucket: 'mex-app-files', public: false, ...options }
   let creds = useAuthStore.getState().iPoolCreds
@@ -231,12 +231,14 @@ const S3FileDownloadClient = async (
       })
 
     return result.Body?.transformToString()
-  } else
+  } else {
+    if (!publicUrlEndpoint) throw new Error('Provide publicUrlEndpoint')
     return await downloadPublicFileFromS3(
       publicUrlEndpoint,
       options.bucket!,
       `public/${options.fileName ?? randomFileName()}`
     )
+  }
 }
 
 const downloadPublicFileFromS3 = async (publicUrlEndpoint: string, bucketName: string, fileName: string) => {

@@ -53,10 +53,13 @@ function App() {
   }
 
   const downloadS3File = async () => {
-    await S3FileDownloadClient('https://gtlz637qnj.execute-api.us-east-1.amazonaws.com/getPublicUrl', {
-      fileName: 'WORKSPACE_aGTHjXGFrje38WXjVbFQr/TASKVIEW_UnDnN',
-      public: true,
-    })
+    await S3FileDownloadClient(
+      {
+        fileName: 'WORKSPACE_aGTHjXGFrje38WXjVbFQr/TASKVIEW_UnDnN',
+        public: true,
+      },
+      'https://gtlz637qnj.execute-api.us-east-1.amazonaws.com/getPublicUrl'
+    )
   }
 
   return (
