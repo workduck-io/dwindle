@@ -227,7 +227,6 @@ const S3FileDownloadClient = async (
         })
       )
       .catch((error) => {
-        console.error(error)
         throw new Error(`Could not upload file to S3: ${error}`)
       })
 
@@ -257,8 +256,6 @@ const downloadPublicFileFromS3 = async (publicUrlEndpoint: string, bucketName: s
   const fileResponse = await fetch(response)
 
   const content = await fileResponse.text()
-  console.log({ content })
-
   return content
 }
 
