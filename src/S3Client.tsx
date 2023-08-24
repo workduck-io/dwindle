@@ -1,11 +1,5 @@
 import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity'
-import {
-  DeleteObjectCommand,
-  GetObjectCommand,
-  GetObjectCommandOutput,
-  PutObjectCommand,
-  S3Client,
-} from '@aws-sdk/client-s3'
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import {
   CognitoIdentityCredentials,
   fromCognitoIdentityPool as FromCognitoIdentityPool,
@@ -201,7 +195,10 @@ const S3FileDeleteClient = async (options?: S3DeleteOptions): Promise<boolean> =
   return true
 }
 
-const S3FileDownloadClient = async (options: S3DownloadOptions): Promise<GetObjectCommandOutput['Body']> => {
+const S3FileDownloadClient = async (
+  publicUrlEndpoint: string,
+  options: S3DownloadOptions
+): Promise<string | undefined> => {
   options = { bucket: 'mex-app-files', public: false, ...options }
   let creds = useAuthStore.getState().iPoolCreds
   if (!options.public) {
@@ -217,29 +214,52 @@ const S3FileDownloadClient = async (options: S3DownloadOptions): Promise<GetObje
     } else {
       throw new Error('Identity Pool Credentials Not Found; Could not upload')
     }
-  }
-  const s3Client = new S3Client({
-    region: AWSRegion,
-    credentials: creds,
-    useAccelerateEndpoint: true,
-  })
-
-  const filePath = options.public
-    ? `public/${options.fileName ?? randomFileName()}`
-    : `private/${useAuthStore.getState().userCred?.userId}/${options.fileName ?? randomFileName()}`
-  const result = await s3Client
-    .send(
-      new GetObjectCommand({
-        Bucket: options.bucket,
-        Key: filePath,
-      })
-    )
-    .catch((error) => {
-      console.error(error)
-      throw new Error(`Could not upload file to S3: ${error}`)
+    const s3Client = new S3Client({
+      region: AWSRegion,
+      credentials: creds,
+      useAccelerateEndpoint: true,
     })
+    const result = await s3Client
+      .send(
+        new GetObjectCommand({
+          Bucket: options.bucket,
+          Key: `private/${useAuthStore.getState().userCred?.userId}/${options.fileName ?? randomFileName()}`,
+        })
+      )
+      .catch((error) => {
+        console.error(error)
+        throw new Error(`Could not upload file to S3: ${error}`)
+      })
 
-  return result.Body
+    return result.Body?.transformToString()
+  } else
+    return await downloadPublicFileFromS3(
+      publicUrlEndpoint,
+      options.bucket!,
+      `public/${options.fileName ?? randomFileName()}`
+    )
+}
+
+const downloadPublicFileFromS3 = async (publicUrlEndpoint: string, bucketName: string, fileName: string) => {
+  const payload = {
+    bucketName,
+    key: fileName,
+  }
+
+  const response = await (
+    await fetch(publicUrlEndpoint, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+  ).text()
+
+  const fileResponse = await fetch(response)
+
+  const content = await fileResponse.text()
+  console.log({ content })
+
+  return content
 }
 
 export { S3FileDeleteClient, S3FileDownloadClient, S3FileUploadClient, S3UploadClient }

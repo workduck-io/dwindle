@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 
 import { useAuth } from '@workduck-io/dwindle'
 
+import { S3FileDownloadClient } from '../../src/S3Client'
 import { APIClient } from './APIClient'
 import { Login, Register, CustomAttributes } from './Auth'
 import { FileUploader } from './FileUploader'
@@ -51,18 +52,28 @@ function App() {
     setUserDetails('')
   }
 
+  const downloadS3File = async () => {
+    await S3FileDownloadClient('https://gtlz637qnj.execute-api.us-east-1.amazonaws.com/getPublicUrl', {
+      fileName: 'WORKSPACE_aGTHjXGFrje38WXjVbFQr/TASKVIEW_UnDnN',
+      public: true,
+    })
+  }
+
   return (
     <div className="App">
       <header className="App-header">
         <h1>Testing example for cognito-http</h1>
-        <h1>Register User</h1>
+        {/* <h1>Register User</h1>
         <Register />
         <h1>Login</h1>
-        <Login />
+        <Login /> */}
         <br />
-        <button onClick={showUserDetails}>Show user Details</button>
+        {/* <button onClick={showUserDetails}>Show user Details</button>
         <br />
         <button onClick={refreshT}> Refresh Token</button>
+        <br /> */}
+        <br />
+        <button onClick={downloadS3File}>Download S3 file</button>
         <br />
         <h4>User Credentials</h4>
         <p>{userDetails}</p>
@@ -71,7 +82,7 @@ function App() {
         {/* <button onClick={sendRequest}>Send requests</button> */}
         <button onClick={logout}>Logout!</button>
         <FileUploader />
-        {/* <APIClient /> */}
+        <APIClient />
       </header>
     </div>
   )
