@@ -54,6 +54,7 @@ const useAuth = () => {
   const setUserPool = useAuthStore((store) => store.setUserPool)
   const setIPool = useAuthStore((store) => store.setIPool)
   const setIPoolCreds = useAuthStore((store) => store.setIPoolCreds)
+  const setPublicS3LambdaUrl = useAuthStore((store) => store.setPublicS3LambdaUrl)
   // const setUser = useAuthStore((store) => store.setUser)
   const setEmail = useAuthStore((store) => store.setEmail)
   // Needs to handle automatic refreshSession
@@ -67,7 +68,6 @@ const useAuth = () => {
     if (userCred) {
       return userCred.email
     }
-
     if (extraOptions?.identityPoolID) {
       const iPoolData: IdentityPoolData = {
         identityPoolID: extraOptions.identityPoolID,
@@ -76,6 +76,8 @@ const useAuth = () => {
       if (extraOptions?.CDN_BASE_URL) iPoolData['CDN_BASE_URL'] = extraOptions.CDN_BASE_URL
       setIPool(iPoolData)
     }
+
+    if (extraOptions?.publicS3LambdaUrl) setPublicS3LambdaUrl(extraOptions.publicS3LambdaUrl)
 
     if (extraOptions?.zustandPersistOptions) {
       useAuthStore.persist.setOptions(extraOptions.zustandPersistOptions)

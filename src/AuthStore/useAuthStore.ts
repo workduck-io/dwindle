@@ -1,11 +1,8 @@
 import { CognitoIdentityCredentials } from '@aws-sdk/credential-provider-cognito-identity'
-import {
-  // CognitoUser,
-  ICognitoUserPoolData,
-} from 'amazon-cognito-identity-js'
+import { ICognitoUserPoolData } from 'amazon-cognito-identity-js'
 import { type KyInstance } from 'ky/distribution/types/ky'
 import create, { GetState, SetState } from 'zustand'
-import { persist, StoreApiWithPersist } from 'zustand/middleware'
+import { StoreApiWithPersist, persist } from 'zustand/middleware'
 
 export interface UserCred {
   email: string
@@ -31,6 +28,7 @@ export interface AuthStoreState {
   setIPool: (iPoolData: IdentityPoolData) => void
   setIPoolCreds: (iPoolCreds: CognitoIdentityCredentials) => void
   email: string | undefined
+  publicS3LambdaUrl?: string
 
   // Removed `user` state because of all stores being copied inside of it
   // See: https://linear.app/workduck-io/issue/WD-1427/[bug]-dwindle-fills-up-localstorage-on-incomplete-register
@@ -39,6 +37,7 @@ export interface AuthStoreState {
   userCred: UserCred | undefined
   getUserCred: () => UserCred | undefined
   setUserCred: (userCred: UserCred) => void
+  setPublicS3LambdaUrl: (publicS3LambdaUrl: string) => void
   setEmail: (email: string) => void
 
   clearStore: () => void
@@ -70,8 +69,10 @@ const useAuthStore = create<
       userCred: undefined,
 
       email: undefined,
+      publicS3LambdaUrl: undefined,
 
       setUserPool: (userPool) => set({ userPool }),
+      setPublicS3LambdaUrl: (publicS3LambdaUrl) => set({ publicS3LambdaUrl }),
       setIPool: (iPool) => set({ iPool }),
       // setUser: (user) => set({ user }),
       setEmail: (email) => set({ email }),

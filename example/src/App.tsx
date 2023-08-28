@@ -1,11 +1,11 @@
 // @ts-ignore
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useAuth } from '@workduck-io/dwindle'
 
 import { S3FileDownloadClient } from '../../src/S3Client'
 import { APIClient } from './APIClient'
-import { Login, Register, CustomAttributes } from './Auth'
+import { CustomAttributes } from './Auth'
 import { FileUploader } from './FileUploader'
 
 const cognitoPoolID = import.meta.env.VITE_APP_COGNITO_POOL_ID
@@ -20,7 +20,12 @@ function App() {
   useEffect(() => {
     // Make sure to initialize the lib rary with the respective keys
     // before calling functions to client or authentication
-    initCognito({ UserPoolId: cognitoPoolID, ClientId: cognitoClientID })
+    initCognito(
+      { UserPoolId: cognitoPoolID, ClientId: cognitoClientID },
+      {
+        publicS3LambdaUrl: 'https://gtlz637qnj.execute-api.us-east-1.amazonaws.com/getPublicUrl',
+      }
+    )
     console.log('Cognito Initialized', { cognitoClientID, cognitoPoolID, identityPoolID })
   }, []) // eslint-disable-line
 
@@ -53,13 +58,10 @@ function App() {
   }
 
   const downloadS3File = async () => {
-    await S3FileDownloadClient(
-      {
-        fileName: 'WORKSPACE_aGTHjXGFrje38WXjVbFQr/TASKVIEW_UnDnN',
-        public: true,
-      },
-      'https://gtlz637qnj.execute-api.us-east-1.amazonaws.com/getPublicUrl'
-    )
+    await S3FileDownloadClient({
+      fileName: 'WORKSPACE_aGTHjXGFrje38WXjVbFQr/TASKVIEW_UnDnN',
+      public: true,
+    })
   }
 
   return (

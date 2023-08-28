@@ -47,5 +47,6 @@ export interface AWSAttribute {
 export interface InitCognitoExtraOptions {
   identityPoolID?: string
   CDN_BASE_URL?: string
+  publicS3LambdaUrl?: string
   zustandPersistOptions?: PersistOptions<AuthStoreState>
 }

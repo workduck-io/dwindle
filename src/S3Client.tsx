@@ -179,7 +179,7 @@ const S3FileDeleteClient = async (options?: S3DeleteOptions): Promise<boolean> =
 
   const filePath = options.public
     ? `public/${options.fileName ?? randomFileName()}`
-    : `private/${useAuthStore.getState().userCred?.userId}/${options.fileName ?? randomFileName()}`
+    : `private/${useAuthStore.getState().userCred?.userId}/${options.fileName}`
 
   await s3Client
     .send(
@@ -195,12 +195,10 @@ const S3FileDeleteClient = async (options?: S3DeleteOptions): Promise<boolean> =
   return true
 }
 
-const S3FileDownloadClient = async (
-  options: S3DownloadOptions,
-  publicUrlEndpoint?: string
-): Promise<string | undefined> => {
+const S3FileDownloadClient = async (options: S3DownloadOptions): Promise<string | undefined> => {
   options = { bucket: 'mex-app-files', public: false, ...options }
   let creds = useAuthStore.getState().iPoolCreds
+  let publicS3LambdaUrl = useAuthStore.getState().publicS3LambdaUrl
   if (!options.public) {
     if (!creds) throw new Error('Identity Pool Credentials Not Found; Could not upload')
 
@@ -232,23 +230,19 @@ const S3FileDownloadClient = async (
 
     return result.Body?.transformToString()
   } else {
-    if (!publicUrlEndpoint) throw new Error('Provide publicUrlEndpoint')
-    return await downloadPublicFileFromS3(
-      publicUrlEndpoint,
-      options.bucket!,
-      `public/${options.fileName ?? randomFileName()}`
-    )
+    if (!publicS3LambdaUrl) throw new Error('Provide publicUrlEndpoint')
+    return await downloadPublicFileFromS3(publicS3LambdaUrl, options.bucket!, `public/${options.fileName}`)
   }
 }
 
-const downloadPublicFileFromS3 = async (publicUrlEndpoint: string, bucketName: string, fileName: string) => {
+const downloadPublicFileFromS3 = async (publicS3LambdaUrl: string, bucketName: string, fileName: string) => {
   const payload = {
     bucketName,
     key: fileName,
   }
 
   const response = await (
-    await fetch(publicUrlEndpoint, {
+    await fetch(publicS3LambdaUrl, {
       method: 'POST',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
